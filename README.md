@@ -2,19 +2,59 @@
 
 Firebase backend scaffolding for Amica safety workflows.
 
-## Scope
+Amica is a women's safety and security MVP. The backend supports the mobile app features needed for the university prototype:
 
-- Firestore rules and indexes
-- Cloud Functions written in TypeScript
-- Seed data for prototype development
-- Documentation for collections and safety flows
-- Basic GitHub Actions validation
+- Firebase Authentication user profile storage
+- Emergency contacts
+- Smart Journey Timer data
+- SOS alert records
+- Sample vehicle status data for Scan Before You Ride
+- Firebase Cloud Functions placeholders for future backend logic
 
-No Firebase credentials or service account keys are committed to this repository.
+No Firebase credentials, service account keys, API keys, private keys, or `.env` files should be committed to this repository.
 
-## Contributing
+## Firestore Collections
 
-Read [CONTRIBUTING.md](CONTRIBUTING.md) for the Amica branch strategy, issue workflow, commit expectations, pull request process, and CI/CD guidance.
+The MVP focuses on these collections:
+
+- `users`
+- `emergency_contacts`
+- `journeys`
+- `sos_alerts`
+- `vehicles`
+
+The database schema is documented in [docs/database_schema.md](docs/database_schema.md).
+
+## Flexible Schema Design
+
+The schema is designed to support future Amica features without breaking the MVP. Major documents include:
+
+- `schemaVersion`
+- `createdAt`
+- `updatedAt`
+- optional `metadata` maps
+- optional nested maps such as `preferences`, `safetySettings`, `evidence`, and `safetyCheck`
+
+Future schema ideas are documented in [docs/schema_evolution.md](docs/schema_evolution.md). Future collections such as `risk_zones`, `notifications`, `user_reports`, `audit_logs`, and `app_config` are documented only and are not implemented yet.
+
+## Firebase Security Rules
+
+Firestore rules are kept simple for the MVP:
+
+- Authenticated users can read/write only their own profile.
+- Authenticated users can read/write their own emergency contacts.
+- Authenticated users can read/write their own journeys.
+- Authenticated users can create and read their own SOS alerts.
+- Authenticated users can read vehicle status data.
+- Public users cannot read private user data.
+- Clients cannot write vehicle records.
+- Everything else is denied by default.
+
+## Mobile App Connection
+
+The `amica-mobile-app` repo should connect to the Firebase development project using safe FlutterFire configuration. Mobile signup creates Firebase Auth users and writes profile documents to the `users` collection.
+
+Do not commit real Firebase configuration secrets or service account JSON files into mobile or backend repositories.
 
 ## Deployment Strategy
 
@@ -25,12 +65,53 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md) for the Amica branch strategy, issue wor
 - Mobile app produces APK artifacts through GitHub Actions.
 - AI repo produces test/artifact outputs only.
 
-## Local development
+The GitHub Actions dev deployment requires these repository settings:
+
+- Secret: `FIREBASE_SERVICE_ACCOUNT_DEV`
+- Variable: `FIREBASE_PROJECT_ID_DEV`
+
+## Local Development
+
+Install and test Cloud Functions:
 
 ```bash
 cd functions
 npm install
-npm test
+npm test --if-present
 ```
 
-Configure real Firebase projects locally through Firebase CLI aliases and environment-specific settings outside version control.
+Validate seed data:
+
+```bash
+python -m json.tool seed-data/vehicles.json
+```
+
+Confirm Firebase config files exist:
+
+```bash
+test -f firestore.rules
+test -f firestore.indexes.json
+test -f firebase.json
+```
+
+On Windows PowerShell:
+
+```powershell
+Test-Path firestore.rules
+Test-Path firestore.indexes.json
+Test-Path firebase.json
+```
+
+## Important Secret Rules
+
+Never commit:
+
+- Firebase service account JSON files
+- Firebase private keys
+- API keys
+- access tokens
+- `.env` files
+- real user data
+- production database exports
+
+If a secret is accidentally committed, tell the team immediately and rotate the secret in Firebase/GitHub.
