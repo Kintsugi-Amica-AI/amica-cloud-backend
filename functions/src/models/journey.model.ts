@@ -1,11 +1,31 @@
-export type JourneyStatus = "active" | "completed" | "expired" | "cancelled";
+export type JourneyType = "walk" | "taxi" | "bus" | "train" | "other";
+export type JourneyStatus = "active" | "safe" | "sos" | "cancelled" | "expired";
+
+export interface GeoPointLike {
+  latitude?: number;
+  longitude?: number;
+  address?: string;
+  name?: string;
+}
+
+export interface JourneySafetyCheck {
+  required: boolean;
+  responseDeadlineSeconds: number;
+  respondedAt?: string | null;
+}
 
 export interface JourneyModel {
   id: string;
   userId: string;
-  destination: string;
+  journeyType: JourneyType;
   status: JourneyStatus;
-  startedAt: string;
-  expectedArrivalAt: string;
-  completedAt?: string;
+  startLocation?: GeoPointLike;
+  destination?: GeoPointLike;
+  estimatedEndTime?: string;
+  actualEndTime?: string;
+  safetyCheck?: JourneySafetyCheck;
+  metadata: Record<string, unknown>;
+  schemaVersion: number;
+  createdAt: string;
+  updatedAt: string;
 }

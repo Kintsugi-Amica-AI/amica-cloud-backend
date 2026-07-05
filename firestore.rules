@@ -6,35 +6,53 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function ownsUserDocument(userId) {
+    function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
+    function ownsExistingDocument() {
+      return isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    function ownsIncomingDocument() {
+      return isSignedIn() && request.resource.data.userId == request.auth.uid;
+    }
+
+    // Users can only read or update their own profile document.
     match /users/{userId} {
-      allow read, write: if ownsUserDocument(userId);
+      allow read, create, update, delete: if isOwner(userId);
     }
 
+    // Emergency contacts are private to the authenticated user who owns them.
     match /emergency_contacts/{contactId} {
-      allow read, write: if isSignedIn()
-        && request.resource.data.userId == request.auth.uid;
+      allow create: if ownsIncomingDocument();
+      allow read, delete: if ownsExistingDocument();
+      allow update: if ownsExistingDocument() && ownsIncomingDocument();
     }
 
+    // Journey sessions are private to the user and can be updated by that user.
     match /journeys/{journeyId} {
-      allow read, write: if isSignedIn()
-        && request.resource.data.userId == request.auth.uid;
+      allow create: if ownsIncomingDocument();
+      allow read, delete: if ownsExistingDocument();
+      allow update: if ownsExistingDocument() && ownsIncomingDocument();
     }
 
+    // Users can create and read their own SOS alerts. Updates are blocked for MVP audit safety.
     match /sos_alerts/{alertId} {
-      allow create: if isSignedIn()
-        && request.resource.data.userId == request.auth.uid;
-      allow read: if isSignedIn()
-        && resource.data.userId == request.auth.uid;
+      allow create: if ownsIncomingDocument();
+      allow read: if ownsExistingDocument();
       allow update, delete: if false;
     }
 
+    // Authenticated users can read demo vehicle status data. Clients cannot write it.
     match /vehicles/{vehicleId} {
       allow read: if isSignedIn();
       allow write: if false;
+    }
+
+    // Deny every future collection until explicit rules are reviewed and added.
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

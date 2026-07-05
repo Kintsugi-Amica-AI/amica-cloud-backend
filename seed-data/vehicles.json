@@ -1,17 +1,77 @@
 [
   {
-    "plateNumber": "ABC1234",
-    "status": "Safe",
-    "notes": "Sample safe vehicle record."
+    "plateNumber": "WP CA 1234",
+    "normalizedPlateNumber": "WPCA1234",
+    "status": "safe",
+    "reportsCount": 0,
+    "riskLevel": "low",
+    "notes": "Sample safe vehicle record for OCR demo testing.",
+    "metadata": {
+      "source": "seed-data",
+      "demoOnly": true
+    },
+    "schemaVersion": 1,
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "updatedAt": "2026-01-01T00:00:00.000Z"
   },
   {
-    "plateNumber": "WPCA9876",
-    "status": "Reported",
-    "notes": "Sample reported vehicle record for testing only."
+    "plateNumber": "WP CA 9876",
+    "normalizedPlateNumber": "WPCA9876",
+    "status": "reported",
+    "reportsCount": 3,
+    "riskLevel": "high",
+    "notes": "Sample reported vehicle record for demo testing only.",
+    "metadata": {
+      "source": "seed-data",
+      "demoOnly": true
+    },
+    "schemaVersion": 1,
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "updatedAt": "2026-01-01T00:00:00.000Z"
   },
   {
     "plateNumber": "UNKNOWN",
-    "status": "Unknown",
-    "notes": "Fallback status when OCR confidence is low."
+    "normalizedPlateNumber": "UNKNOWN",
+    "status": "unknown",
+    "reportsCount": 0,
+    "riskLevel": "unknown",
+    "notes": "Fallback vehicle status when OCR confidence is low or no record exists.",
+    "metadata": {
+      "source": "seed-data",
+      "demoOnly": true
+    },
+    "schemaVersion": 1,
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "updatedAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "plateNumber": "SP AB 4567",
+    "normalizedPlateNumber": "SPAB4567",
+    "status": "safe",
+    "reportsCount": 0,
+    "riskLevel": "low",
+    "notes": "Additional sample safe vehicle for Scan Before You Ride testing.",
+    "metadata": {
+      "source": "seed-data",
+      "demoOnly": true
+    },
+    "schemaVersion": 1,
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "updatedAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "plateNumber": "CP ZZ 9090",
+    "normalizedPlateNumber": "CPZZ9090",
+    "status": "reported",
+    "reportsCount": 1,
+    "riskLevel": "medium",
+    "notes": "Additional sample reported vehicle for OCR demo testing.",
+    "metadata": {
+      "source": "seed-data",
+      "demoOnly": true
+    },
+    "schemaVersion": 1,
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "updatedAt": "2026-01-01T00:00:00.000Z"
   }
 ]
