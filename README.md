@@ -12,6 +12,10 @@ Firebase backend scaffolding for Amica safety workflows.
 
 No Firebase credentials or service account keys are committed to this repository.
 
+## Contributing
+
+Read [CONTRIBUTING.md](CONTRIBUTING.md) for the Amica branch strategy, issue workflow, commit expectations, pull request process, and CI/CD guidance.
+
 ## Local development
 
 ```bash
