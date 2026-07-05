@@ -1,0 +1,23 @@
+# Node and Firebase build output
+node_modules/
+functions/node_modules/
+functions/lib/
+functions/.runtimeconfig.json
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
+# Local environment and secrets
+.env
+.env.*
+*.local
+*.key
+*.pem
+serviceAccount*.json
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

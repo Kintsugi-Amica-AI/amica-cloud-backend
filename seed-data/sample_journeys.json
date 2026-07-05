@@ -1,0 +1,10 @@
+[
+  {
+    "id": "sample-journey-1",
+    "userId": "sample-user-1",
+    "destination": "Campus library",
+    "status": "active",
+    "startedAt": "2026-01-01T18:00:00.000Z",
+    "expectedArrivalAt": "2026-01-01T18:30:00.000Z"
+  }
+]

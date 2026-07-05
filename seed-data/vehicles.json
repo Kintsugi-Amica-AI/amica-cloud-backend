@@ -1,0 +1,17 @@
+[
+  {
+    "plateNumber": "ABC1234",
+    "status": "Safe",
+    "notes": "Sample safe vehicle record."
+  },
+  {
+    "plateNumber": "WPCA9876",
+    "status": "Reported",
+    "notes": "Sample reported vehicle record for testing only."
+  },
+  {
+    "plateNumber": "UNKNOWN",
+    "status": "Unknown",
+    "notes": "Fallback status when OCR confidence is low."
+  }
+]

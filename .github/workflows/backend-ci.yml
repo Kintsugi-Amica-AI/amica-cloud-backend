@@ -1,0 +1,40 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install function dependencies
+        working-directory: functions
+        run: npm install
+
+      - name: Run function tests
+        working-directory: functions
+        run: npm test --if-present
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Validate vehicle seed JSON
+        run: python -m json.tool seed-data/vehicles.json > /tmp/vehicles.json
+
+      - name: Check Firebase config files
+        run: |
+          test -f firestore.rules
+          test -f firestore.indexes.json

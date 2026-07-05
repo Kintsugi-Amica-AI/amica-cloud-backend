@@ -1,0 +1,9 @@
+[
+  {
+    "id": "sample-sos-1",
+    "userId": "sample-user-1",
+    "triggerType": "manual_sos_pressed",
+    "status": "created",
+    "createdAt": "2026-01-01T18:15:00.000Z"
+  }
+]
