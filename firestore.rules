@@ -24,10 +24,14 @@ service cloud.firestore {
     }
 
     // Emergency contacts are private to the authenticated user who owns them.
+    // Mobile queries this collection with where("userId", "==", request.auth.uid).
     match /emergency_contacts/{contactId} {
+      // Create/update must keep request.resource.data.userId equal to the current user.
       allow create: if ownsIncomingDocument();
-      allow read, delete: if ownsExistingDocument();
       allow update: if ownsExistingDocument() && ownsIncomingDocument();
+
+      // Read/delete must only target documents already owned by the current user.
+      allow read, delete: if ownsExistingDocument();
     }
 
     // Journey sessions are private to the user and can be updated by that user.

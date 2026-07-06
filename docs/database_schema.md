@@ -105,29 +105,41 @@ Optional and extendable fields:
 - `metadata`: map
 - `schemaVersion`: number
 
+Recommended default values:
+
+- `relationship`: `""`
+- `priority`: `1`
+- `isActive`: `true`
+- `notificationMethods`: `["sms"]`
+- `metadata`: `{}`
+- `schemaVersion`: `1`
+
 Example:
 
 ```json
 {
-  "id": "contact-1",
-  "userId": "sample-user-1",
+  "id": "contact_001",
+  "userId": "firebase_user_uid",
   "name": "Mother",
-  "phone": "+94771111111",
-  "relationship": "family",
+  "phone": "+94771234567",
+  "relationship": "Mother",
   "priority": 1,
   "isActive": true,
-  "notificationMethods": ["push", "sms"],
+  "notificationMethods": ["sms"],
   "metadata": {},
   "schemaVersion": 1,
-  "createdAt": "2026-01-01T00:05:00.000Z",
-  "updatedAt": "2026-01-01T00:05:00.000Z"
+  "createdAt": "server timestamp",
+  "updatedAt": "server timestamp"
 }
 ```
 
 Future extension notes:
 
-- Multiple notification methods can be added without changing the basic contact list.
+- SOS alerts will later read active emergency contacts for the signed-in user.
+- Higher priority contacts should be notified first in future notification flows.
+- `notificationMethods` can later support `sms`, `call`, `email`, and `push`.
 - Contact verification status can be stored in `metadata` later.
+- `metadata` is reserved for future feature expansion without changing the MVP fields.
 
 ## journeys
 

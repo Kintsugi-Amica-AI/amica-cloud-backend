@@ -50,6 +50,18 @@ Firestore rules are kept simple for the MVP:
 - Clients cannot write vehicle records.
 - Everything else is denied by default.
 
+## Emergency Contacts
+
+The `emergency_contacts` collection stores trusted contacts for each signed-in user. SOS alerts will later read the user's active contacts and notify higher priority contacts first.
+
+Each contact document is owned by `userId`. Firestore rules allow users to create, read, update, and delete only documents where `userId` matches their Firebase Auth UID. The mobile app should query contacts with:
+
+```text
+emergency_contacts where userId == currentUser.uid
+```
+
+Do not store real private contact data in seed files, screenshots, commits, or logs. No Firebase secrets, service account JSON files, API tokens, or `.env` files should be committed.
+
 ## Mobile App Connection
 
 The `amica-mobile-app` repo should connect to the Firebase development project using safe FlutterFire configuration. Mobile signup creates Firebase Auth users and writes profile documents to the `users` collection.
