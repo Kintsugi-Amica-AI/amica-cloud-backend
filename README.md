@@ -62,6 +62,34 @@ emergency_contacts where userId == currentUser.uid
 
 Do not store real private contact data in seed files, screenshots, commits, or logs. No Firebase secrets, service account JSON files, API tokens, or `.env` files should be committed.
 
+## Location, Journey and SOS Backend
+
+The `journeys` collection stores Smart Journey Timer sessions for signed-in users. MVP journey documents can include `startLocation`, `currentLocation`, `destination`, `estimatedDurationMinutes`, `estimatedEndTime`, and `safetyCheck`.
+
+The `sos_alerts` collection stores manual, timer, voice, and future SOS triggers. MVP SOS documents can include the user's current location so the mobile app can display and later share live-location alerts.
+
+Location maps use this simple shape:
+
+```json
+{
+  "latitude": 6.9271,
+  "longitude": 79.8612,
+  "address": "Colombo"
+}
+```
+
+All journey and SOS documents are owned by `userId`. Firestore rules allow authenticated users to create, read, and update only their own journey data. Users can create and read their own SOS alerts, and can update SOS status fields for MVP testing.
+
+The mobile app saves current location into:
+
+- `journeys.startLocation`
+- `journeys.currentLocation`
+- `sos_alerts.location`
+
+Live tracking history is planned later and should use a separate subcollection or collection. Route drawing, Google Directions API usage, background location tracking, and real notification dispatch are not implemented in this MVP foundation.
+
+Do not commit Google Maps API keys, Firebase service account files, private keys, access tokens, `.env` files, or real user location exports.
+
 ## Mobile App Connection
 
 The `amica-mobile-app` repo should connect to the Firebase development project using safe FlutterFire configuration. Mobile signup creates Firebase Auth users and writes profile documents to the `users` collection.

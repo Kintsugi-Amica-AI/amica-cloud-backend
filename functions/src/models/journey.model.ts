@@ -6,6 +6,7 @@ export interface GeoPointLike {
   longitude?: number;
   address?: string;
   name?: string;
+  updatedAt?: string;
 }
 
 export interface JourneySafetyCheck {
@@ -20,7 +21,9 @@ export interface JourneyModel {
   journeyType: JourneyType;
   status: JourneyStatus;
   startLocation?: GeoPointLike;
+  currentLocation?: GeoPointLike;
   destination?: GeoPointLike;
+  estimatedDurationMinutes?: number;
   estimatedEndTime?: string;
   actualEndTime?: string;
   safetyCheck?: JourneySafetyCheck;

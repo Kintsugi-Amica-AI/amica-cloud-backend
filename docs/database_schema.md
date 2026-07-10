@@ -160,11 +160,17 @@ Optional and extendable fields:
   - `latitude`: number
   - `longitude`: number
   - `address`: string
+- `currentLocation`: map
+  - `latitude`: number
+  - `longitude`: number
+  - `address`: string
+  - `updatedAt`: timestamp
 - `destination`: map
   - `latitude`: number
   - `longitude`: number
   - `address`: string
   - `name`: string
+- `estimatedDurationMinutes`: number
 - `estimatedEndTime`: timestamp
 - `actualEndTime`: timestamp
 - `safetyCheck`: map
@@ -174,18 +180,33 @@ Optional and extendable fields:
 - `metadata`: map
 - `schemaVersion`: number
 
+Recommended default values:
+
+- `journeyType`: `walk`
+- `status`: `active`
+- `safetyCheck.required`: `true`
+- `safetyCheck.responseDeadlineSeconds`: `30`
+- `metadata`: `{}`
+- `schemaVersion`: `1`
+
 Example:
 
 ```json
 {
   "id": "journey-1",
   "userId": "sample-user-1",
-  "journeyType": "taxi",
+  "journeyType": "walk",
   "status": "active",
   "startLocation": {
     "latitude": 6.9271,
     "longitude": 79.8612,
     "address": "Colombo"
+  },
+  "currentLocation": {
+    "latitude": 6.9271,
+    "longitude": 79.8612,
+    "address": "Colombo",
+    "updatedAt": "server timestamp"
   },
   "destination": {
     "latitude": 6.9036,
@@ -193,10 +214,11 @@ Example:
     "address": "Malabe",
     "name": "Campus"
   },
+  "estimatedDurationMinutes": 30,
   "estimatedEndTime": "2026-01-01T18:30:00.000Z",
   "safetyCheck": {
     "required": true,
-    "responseDeadlineSeconds": 60,
+    "responseDeadlineSeconds": 30,
     "respondedAt": null
   },
   "metadata": {},
@@ -208,7 +230,10 @@ Example:
 
 Future extension notes:
 
-- Smart Stop Alert can extend journeys using `journeyType` and `destination`.
+- Smart Stop Alert can use `destination` and `journeyType`.
+- Live tracking can later store location history in a separate subcollection.
+- Route drawing can later be added using Google Directions API.
+- Risk zones can later be calculated from anonymized SOS locations.
 - Route sharing, delay reasons, and transport details can be added under `metadata`.
 
 ## sos_alerts
@@ -240,6 +265,16 @@ Optional and extendable fields:
 - `metadata`: map
 - `schemaVersion`: number
 
+Recommended default values:
+
+- `triggerType`: `manual`
+- `status`: `active`
+- `message`: `"I need help. This is my live location."`
+- `notifiedContacts`: `[]`
+- `evidence`: `{}`
+- `metadata`: `{}`
+- `schemaVersion`: `1`
+
 Example:
 
 ```json
@@ -254,13 +289,9 @@ Example:
     "longitude": 79.8612,
     "address": "Colombo"
   },
-  "message": "I need help. Please check my location.",
+  "message": "I need help. This is my live location.",
   "notifiedContacts": [],
-  "evidence": {
-    "voicePhraseDetected": false,
-    "scannedPlateNumber": "",
-    "confidenceScore": 0
-  },
+  "evidence": {},
   "metadata": {},
   "schemaVersion": 1,
   "createdAt": "2026-01-01T18:10:00.000Z",

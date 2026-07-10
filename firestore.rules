@@ -18,6 +18,11 @@ service cloud.firestore {
       return isSignedIn() && request.resource.data.userId == request.auth.uid;
     }
 
+    function updatesOnlySosStatus() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(["status", "updatedAt"]);
+    }
+
     // Users can only read or update their own profile document.
     match /users/{userId} {
       allow read, create, update, delete: if isOwner(userId);
@@ -34,18 +39,28 @@ service cloud.firestore {
       allow read, delete: if ownsExistingDocument();
     }
 
-    // Journey sessions are private to the user and can be updated by that user.
+    // Journey sessions are private to the authenticated user who owns them.
+    // Mobile queries this collection with where("userId", "==", request.auth.uid).
     match /journeys/{journeyId} {
+      // Create/update must keep userId equal to the current user's Firebase Auth UID.
       allow create: if ownsIncomingDocument();
-      allow read, delete: if ownsExistingDocument();
       allow update: if ownsExistingDocument() && ownsIncomingDocument();
+
+      // Read/delete only allow documents already owned by the current user.
+      allow read, delete: if ownsExistingDocument();
     }
 
-    // Users can create and read their own SOS alerts. Updates are blocked for MVP audit safety.
+    // SOS alerts are private to the authenticated user who created them.
+    // Mobile queries this collection with where("userId", "==", request.auth.uid).
     match /sos_alerts/{alertId} {
       allow create: if ownsIncomingDocument();
       allow read: if ownsExistingDocument();
-      allow update, delete: if false;
+
+      // MVP only allows the owner to update status fields, for example resolved/cancelled.
+      allow update: if ownsExistingDocument()
+        && ownsIncomingDocument()
+        && updatesOnlySosStatus();
+      allow delete: if false;
     }
 
     // Authenticated users can read demo vehicle status data. Clients cannot write it.
