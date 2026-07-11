@@ -47,7 +47,23 @@ Optional and extendable fields:
   - `defaultEmergencyMessage`: string
   - `autoSosDelaySeconds`: number
   - `fakeCallContactName`: string
+  - `fakeCallPhoneNumber`: string
+  - `voiceSosEnabled`: boolean
+  - `secretPhraseEnabled`: boolean
 - `metadata`: map
+
+Recommended default `safetySettings`:
+
+```json
+{
+  "defaultEmergencyMessage": "I need help. This is my live location.",
+  "autoSosDelaySeconds": 30,
+  "fakeCallContactName": "Amica Friend",
+  "fakeCallPhoneNumber": "+94 700 000 000",
+  "voiceSosEnabled": true,
+  "secretPhraseEnabled": true
+}
+```
 
 Example:
 
@@ -67,9 +83,12 @@ Example:
     "locationSharingEnabled": true
   },
   "safetySettings": {
-    "defaultEmergencyMessage": "I need help. Please check my location.",
-    "autoSosDelaySeconds": 60,
-    "fakeCallContactName": "Amica Safety"
+    "defaultEmergencyMessage": "I need help. This is my live location.",
+    "autoSosDelaySeconds": 30,
+    "fakeCallContactName": "Amica Friend",
+    "fakeCallPhoneNumber": "+94 700 000 000",
+    "voiceSosEnabled": true,
+    "secretPhraseEnabled": true
   },
   "metadata": {},
   "createdAt": "2026-01-01T00:00:00.000Z",
@@ -80,6 +99,10 @@ Example:
 Future extension notes:
 
 - Fake Call settings can be added under `safetySettings`.
+- `secretPhrase` is used for Stealth Voice SOS in the MVP.
+- `fakeCallContactName` and `fakeCallPhoneNumber` are used by the simulated fake call UI.
+- In production, sensitive safety settings and phrase fields should be protected carefully.
+- For MVP demo testing, keep the secret phrase simple and user-editable.
 - Admin dashboard permissions can use `role`.
 - Per-user app settings can be added under `preferences`.
 
@@ -260,6 +283,10 @@ Optional and extendable fields:
 - `notifiedContacts`: array
 - `evidence`: map
   - `voicePhraseDetected`: boolean
+  - `detectedPhrase`: string
+  - `expectedPhrase`: string
+  - `voiceConfidenceScore`: number
+  - `fakeCallActive`: boolean
   - `scannedPlateNumber`: string
   - `confidenceScore`: number
 - `metadata`: map
@@ -296,6 +323,35 @@ Example:
   "schemaVersion": 1,
   "createdAt": "2026-01-01T18:10:00.000Z",
   "updatedAt": "2026-01-01T18:10:00.000Z"
+}
+```
+
+Voice SOS example:
+
+```json
+{
+  "id": "sos_001",
+  "userId": "firebase_user_uid",
+  "triggerType": "voice",
+  "status": "active",
+  "location": {
+    "latitude": 6.9271,
+    "longitude": 79.8612,
+    "address": ""
+  },
+  "message": "I need help. This is my live location.",
+  "notifiedContacts": [],
+  "evidence": {
+    "voicePhraseDetected": true,
+    "detectedPhrase": "amica help me",
+    "expectedPhrase": "amica help me",
+    "voiceConfidenceScore": 0.85,
+    "fakeCallActive": true
+  },
+  "metadata": {},
+  "schemaVersion": 1,
+  "createdAt": "server timestamp",
+  "updatedAt": "server timestamp"
 }
 ```
 

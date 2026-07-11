@@ -11,6 +11,9 @@ export interface UserSafetySettings {
   defaultEmergencyMessage: string;
   autoSosDelaySeconds: number;
   fakeCallContactName: string;
+  fakeCallPhoneNumber: string;
+  voiceSosEnabled: boolean;
+  secretPhraseEnabled: boolean;
 }
 
 export interface UserModel {

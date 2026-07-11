@@ -23,9 +23,12 @@ const DEFAULT_PREFERENCES: UserPreferences = {
 };
 
 const DEFAULT_SAFETY_SETTINGS: UserSafetySettings = {
-  defaultEmergencyMessage: "I need help. Please check my location.",
-  autoSosDelaySeconds: 60,
-  fakeCallContactName: "Amica Safety",
+  defaultEmergencyMessage: "I need help. This is my live location.",
+  autoSosDelaySeconds: 30,
+  fakeCallContactName: "Amica Friend",
+  fakeCallPhoneNumber: "+94 700 000 000",
+  voiceSosEnabled: true,
+  secretPhraseEnabled: true,
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -59,7 +62,18 @@ function normalizePreferences(value: unknown): UserPreferences {
   };
 }
 
-function normalizeSafetySettings(value: unknown): UserSafetySettings {
+export function getDefaultSafetySettings(): UserSafetySettings {
+  return { ...DEFAULT_SAFETY_SETTINGS };
+}
+
+export function normalizeSecretPhrase(phrase: unknown): string {
+  return readString(phrase)
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+export function buildUserSafetySettings(value: unknown): UserSafetySettings {
   const data = isRecord(value) ? value : {};
   return {
     defaultEmergencyMessage: readString(
@@ -73,6 +87,18 @@ function normalizeSafetySettings(value: unknown): UserSafetySettings {
     fakeCallContactName: readString(
       data.fakeCallContactName,
       DEFAULT_SAFETY_SETTINGS.fakeCallContactName,
+    ),
+    fakeCallPhoneNumber: readString(
+      data.fakeCallPhoneNumber,
+      DEFAULT_SAFETY_SETTINGS.fakeCallPhoneNumber,
+    ),
+    voiceSosEnabled: readBoolean(
+      data.voiceSosEnabled,
+      DEFAULT_SAFETY_SETTINGS.voiceSosEnabled,
+    ),
+    secretPhraseEnabled: readBoolean(
+      data.secretPhraseEnabled,
+      DEFAULT_SAFETY_SETTINGS.secretPhraseEnabled,
     ),
   };
 }
@@ -90,11 +116,11 @@ export function normalizeUserProfile(
     name: readString(data.name, readString(data.displayName)),
     email: readString(data.email),
     phone: readString(data.phone, readString(data.phoneNumber)),
-    secretPhrase: readString(data.secretPhrase) || undefined,
+    secretPhrase: normalizeSecretPhrase(data.secretPhrase) || undefined,
     role,
     status,
     preferences: normalizePreferences(data.preferences),
-    safetySettings: normalizeSafetySettings(data.safetySettings),
+    safetySettings: buildUserSafetySettings(data.safetySettings),
     metadata: isRecord(data.metadata) ? data.metadata : {},
     schemaVersion: readNumber(data.schemaVersion, 1),
     createdAt: readString(data.createdAt, now),
@@ -110,11 +136,11 @@ export async function createUserProfile(input: CreateUserProfileInput): Promise<
     name: input.name,
     email: input.email,
     phone: input.phone,
-    secretPhrase: input.secretPhrase,
+    secretPhrase: normalizeSecretPhrase(input.secretPhrase),
     role: "user",
     status: "active",
     preferences: DEFAULT_PREFERENCES,
-    safetySettings: DEFAULT_SAFETY_SETTINGS,
+    safetySettings: getDefaultSafetySettings(),
     metadata: {},
     schemaVersion: 1,
     createdAt: now,
