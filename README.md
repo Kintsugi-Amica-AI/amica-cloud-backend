@@ -90,6 +90,19 @@ Live tracking history is planned later and should use a separate subcollection o
 
 Do not commit Google Maps API keys, Firebase service account files, private keys, access tokens, `.env` files, or real user location exports.
 
+## Fake Call and Voice SOS Backend
+
+Fake Call is simulated inside the mobile app for the MVP. The backend foundation supports it through user safety settings and SOS alert evidence.
+
+- The user's MVP `secretPhrase` can be stored on the `users` profile document.
+- Fake call display settings can be stored in `users.safetySettings`, including `fakeCallContactName`, `fakeCallPhoneNumber`, `voiceSosEnabled`, and `secretPhraseEnabled`.
+- Voice SOS creates a document in `sos_alerts` with `triggerType` set to `voice`.
+- Voice SOS evidence is stored in `sos_alerts.evidence`, including detected phrase, expected phrase, confidence score, and whether the fake call screen was active.
+- Fake call session logs are not required for the MVP. A future `fake_call_sessions` collection is documented in `docs/schema_evolution.md`.
+- No real SMS, phone call, or emergency authority notification is implemented in this backend placeholder.
+
+Do not commit secret phrases from real users, API keys, Firebase service account files, private keys, access tokens, or `.env` files.
+
 ## Mobile App Connection
 
 The `amica-mobile-app` repo should connect to the Firebase development project using safe FlutterFire configuration. Mobile signup creates Firebase Auth users and writes profile documents to the `users` collection.

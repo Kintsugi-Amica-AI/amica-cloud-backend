@@ -57,11 +57,28 @@ Example:
 ```json
 {
   "safetySettings": {
-    "fakeCallContactName": "Amica Safety",
-    "fakeCallDelaySeconds": 10
+    "fakeCallContactName": "Amica Friend",
+    "fakeCallPhoneNumber": "+94 700 000 000",
+    "voiceSosEnabled": true,
+    "secretPhraseEnabled": true
   }
 }
 ```
+
+Future fake call session logs can use a new optional collection named `fake_call_sessions`.
+
+Possible future fields:
+
+- `id`
+- `userId`
+- `startedAt`
+- `endedAt`
+- `status`: `incoming | active | ended | sos_triggered`
+- `voiceSosTriggered`: boolean
+- `sosAlertId`
+- `metadata`
+
+For MVP, fake call session logs are not required. The important output is creating an SOS alert with `triggerType` set to `voice`.
 
 ### Voice SOS
 
@@ -73,7 +90,10 @@ Example:
 {
   "evidence": {
     "voicePhraseDetected": true,
-    "confidenceScore": 0.91
+    "detectedPhrase": "amica help me",
+    "expectedPhrase": "amica help me",
+    "voiceConfidenceScore": 0.91,
+    "fakeCallActive": true
   }
 }
 ```
@@ -172,3 +192,4 @@ Documented only:
 - `notifications`
 - `audit_logs`
 - `app_config`
+- `fake_call_sessions`

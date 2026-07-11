@@ -5,6 +5,10 @@ export type SosAlertStatus = "active" | "sent" | "resolved" | "cancelled";
 
 export interface SosAlertEvidence {
   voicePhraseDetected?: boolean;
+  detectedPhrase?: string;
+  expectedPhrase?: string;
+  voiceConfidenceScore?: number;
+  fakeCallActive?: boolean;
   scannedPlateNumber?: string;
   confidenceScore?: number;
 }

@@ -97,6 +97,10 @@ export function buildSosAlertPayload(
     notifiedContacts: readStringArray(input.notifiedContacts),
     evidence: {
       voicePhraseDetected: evidence.voicePhraseDetected === true,
+      detectedPhrase: readString(evidence.detectedPhrase) || undefined,
+      expectedPhrase: readString(evidence.expectedPhrase) || undefined,
+      voiceConfidenceScore: readNumber(evidence.voiceConfidenceScore, 0),
+      fakeCallActive: evidence.fakeCallActive === true,
       scannedPlateNumber: readString(evidence.scannedPlateNumber) || undefined,
       confidenceScore: readNumber(evidence.confidenceScore, 0),
     },
@@ -105,6 +109,31 @@ export function buildSosAlertPayload(
     createdAt: now,
     updatedAt: now,
   };
+}
+
+export function buildVoiceSosPayload(
+  userId: string,
+  location: LocationInput,
+  detectedPhrase: string,
+  expectedPhrase: string,
+  confidenceScore = 0,
+): SosAlertModel {
+  return buildSosAlertPayload(
+    {
+      userId,
+      triggerType: ALERT_TYPES.voice,
+      location,
+      evidence: {
+        voicePhraseDetected: true,
+        detectedPhrase,
+        expectedPhrase,
+        voiceConfidenceScore: confidenceScore,
+        fakeCallActive: true,
+      },
+      metadata: {},
+    },
+    userId,
+  );
 }
 
 export function buildManualSosPayload(
@@ -160,6 +189,10 @@ export function normalizeSosAlert(
     notifiedContacts: readStringArray(data.notifiedContacts),
     evidence: {
       voicePhraseDetected: evidence.voicePhraseDetected === true,
+      detectedPhrase: readString(evidence.detectedPhrase) || undefined,
+      expectedPhrase: readString(evidence.expectedPhrase) || undefined,
+      voiceConfidenceScore: readNumber(evidence.voiceConfidenceScore, 0),
+      fakeCallActive: evidence.fakeCallActive === true,
       scannedPlateNumber: readString(evidence.scannedPlateNumber) || undefined,
       confidenceScore: readNumber(evidence.confidenceScore, 0),
     },
