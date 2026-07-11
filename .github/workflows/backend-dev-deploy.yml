@@ -111,7 +111,7 @@ jobs:
       - name: Deploy functions to dev if configured
         run: |
           if [ -f functions/package.json ]; then
-            firebase deploy --only functions --project "$FIREBASE_PROJECT_ID_DEV" --non-interactive
+            firebase deploy --only functions --project "$FIREBASE_PROJECT_ID_DEV" --non-interactive --force
           else
             echo "No functions configured. Skipping functions deploy."
           fi
