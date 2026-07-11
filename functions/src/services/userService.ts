@@ -29,6 +29,8 @@ const DEFAULT_SAFETY_SETTINGS: UserSafetySettings = {
   fakeCallPhoneNumber: "+94 700 000 000",
   voiceSosEnabled: true,
   secretPhraseEnabled: true,
+  fakeCallVolumeShortcutEnabled: true,
+  voiceSosEmergencyMessage: "I need help. This is my live location.",
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -99,6 +101,17 @@ export function buildUserSafetySettings(value: unknown): UserSafetySettings {
     secretPhraseEnabled: readBoolean(
       data.secretPhraseEnabled,
       DEFAULT_SAFETY_SETTINGS.secretPhraseEnabled,
+    ),
+    fakeCallVolumeShortcutEnabled: readBoolean(
+      data.fakeCallVolumeShortcutEnabled,
+      DEFAULT_SAFETY_SETTINGS.fakeCallVolumeShortcutEnabled,
+    ),
+    voiceSosEmergencyMessage: readString(
+      data.voiceSosEmergencyMessage,
+      readString(
+        data.defaultEmergencyMessage,
+        DEFAULT_SAFETY_SETTINGS.voiceSosEmergencyMessage,
+      ),
     ),
   };
 }

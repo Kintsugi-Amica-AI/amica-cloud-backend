@@ -14,6 +14,8 @@ export interface UserSafetySettings {
   fakeCallPhoneNumber: string;
   voiceSosEnabled: boolean;
   secretPhraseEnabled: boolean;
+  fakeCallVolumeShortcutEnabled: boolean;
+  voiceSosEmergencyMessage: string;
 }
 
 export interface UserModel {

@@ -50,6 +50,8 @@ Optional and extendable fields:
   - `fakeCallPhoneNumber`: string
   - `voiceSosEnabled`: boolean
   - `secretPhraseEnabled`: boolean
+  - `fakeCallVolumeShortcutEnabled`: boolean
+  - `voiceSosEmergencyMessage`: string
 - `metadata`: map
 
 Recommended default `safetySettings`:
@@ -61,7 +63,9 @@ Recommended default `safetySettings`:
   "fakeCallContactName": "Amica Friend",
   "fakeCallPhoneNumber": "+94 700 000 000",
   "voiceSosEnabled": true,
-  "secretPhraseEnabled": true
+  "secretPhraseEnabled": true,
+  "fakeCallVolumeShortcutEnabled": true,
+  "voiceSosEmergencyMessage": "I need help. This is my live location."
 }
 ```
 
@@ -88,7 +92,9 @@ Example:
     "fakeCallContactName": "Amica Friend",
     "fakeCallPhoneNumber": "+94 700 000 000",
     "voiceSosEnabled": true,
-    "secretPhraseEnabled": true
+    "secretPhraseEnabled": true,
+    "fakeCallVolumeShortcutEnabled": true,
+    "voiceSosEmergencyMessage": "I need help. This is my live location."
   },
   "metadata": {},
   "createdAt": "2026-01-01T00:00:00.000Z",
@@ -101,6 +107,8 @@ Future extension notes:
 - Fake Call settings can be added under `safetySettings`.
 - `secretPhrase` is used for Stealth Voice SOS in the MVP.
 - `fakeCallContactName` and `fakeCallPhoneNumber` are used by the simulated fake call UI.
+- `fakeCallVolumeShortcutEnabled` controls the mobile shortcut for pressing volume down three times while the app is open.
+- `voiceSosEmergencyMessage` is the message saved with a Voice SOS alert when the secret phrase is detected.
 - In production, sensitive safety settings and phrase fields should be protected carefully.
 - For MVP demo testing, keep the secret phrase simple and user-editable.
 - Admin dashboard permissions can use `role`.

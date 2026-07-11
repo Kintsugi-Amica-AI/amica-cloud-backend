@@ -95,7 +95,7 @@ Do not commit Google Maps API keys, Firebase service account files, private keys
 Fake Call is simulated inside the mobile app for the MVP. The backend foundation supports it through user safety settings and SOS alert evidence.
 
 - The user's MVP `secretPhrase` can be stored on the `users` profile document.
-- Fake call display settings can be stored in `users.safetySettings`, including `fakeCallContactName`, `fakeCallPhoneNumber`, `voiceSosEnabled`, and `secretPhraseEnabled`.
+- Fake call display settings can be stored in `users.safetySettings`, including `fakeCallContactName`, `fakeCallPhoneNumber`, `voiceSosEnabled`, `secretPhraseEnabled`, `fakeCallVolumeShortcutEnabled`, and `voiceSosEmergencyMessage`.
 - Voice SOS creates a document in `sos_alerts` with `triggerType` set to `voice`.
 - Voice SOS evidence is stored in `sos_alerts.evidence`, including detected phrase, expected phrase, confidence score, and whether the fake call screen was active.
 - Fake call session logs are not required for the MVP. A future `fake_call_sessions` collection is documented in `docs/schema_evolution.md`.

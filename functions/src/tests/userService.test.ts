@@ -18,6 +18,8 @@ export function userServiceSmokeTest(): boolean {
     defaults.defaultEmergencyMessage === "I need help. This is my live location." &&
     defaults.voiceSosEnabled === true &&
     defaults.secretPhraseEnabled === true &&
+    defaults.fakeCallVolumeShortcutEnabled === true &&
+    defaults.voiceSosEmergencyMessage === "I need help. This is my live location." &&
     customSettings.fakeCallContactName === "Mother" &&
     customSettings.fakeCallPhoneNumber === "+94771234567" &&
     customSettings.voiceSosEnabled === false &&
