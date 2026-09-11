@@ -22,31 +22,37 @@ Future collections are documented here only. They should not be implemented unti
 - Avoid moving existing fields unless there is a migration plan.
 - Mobile and backend code should use default values when optional fields are missing.
 
-## Future Feature Examples
+## Implemented Extensions
 
 ### Smart Stop Alert
 
-Smart Stop Alert can extend `journeys`.
+Smart Stop Alert is implemented and extends `journeys`, as planned. It is no longer a future example.
 
-Useful existing fields:
+The mobile Bus Stop Alert flow writes an ordinary `journeys` document with:
 
-- `journeyType`
-- `destination`
-- `status`
-- `safetyCheck`
-- `metadata`
+- `journeyType`: `bus`
+- `destination`: the drop-off, with `latitude` and `longitude` set
+- `stopAlert.enabled`: `true`
+- `stopAlert.alertDistanceMeters`: number, `2000` by default
+- `stopAlert.alertedAt`: `null` until the alarm sounds, then a timestamp
+- `safetyCheck.required`: `false`
+- `estimatedDurationMinutes`: `0`
 
-Example future metadata:
+`stopAlert` was added as a new optional map rather than under `metadata`, following the evolution principle of preferring optional fields for new feature data, and matching how `safetyCheck` is already modelled. A journey without a `stopAlert` map is an ordinary timer journey, so every journey written before this feature stays valid.
 
-```json
-{
-  "metadata": {
-    "smartStopEnabled": true,
-    "expectedStops": ["Main Gate", "Library"],
-    "unexpectedStopDetected": false
-  }
-}
-```
+Backend rules that follow from the shape:
+
+- `stopAlert.enabled` is the only thing that distinguishes the two kinds of journey. Read paths must not assume an active journey has a countdown.
+- `hasJourneyExpired` always returns false for a stop alert ride. Its `estimatedEndTime` is only a placeholder equal to the ride's start, so without this every bus ride would read as expired the moment it began and `onJourneyUpdated` would send a safety check the rider never asked for.
+- `estimatedDurationMinutes` of `0` is valid on these rides and is not validated as a positive duration.
+- Normalizing a journey must carry `stopAlert` through. Dropping it on a read-modify-write would erase the rider's alarm settings mid-ride.
+
+Still open for a later iteration:
+
+- Detecting an *unexpected* stop (the original `unexpectedStopDetected` idea) is not implemented. It would need a stop list and route data, and should be designed separately.
+- Distance is straight-line. Road distance would need the Directions API.
+
+## Future Feature Examples
 
 ### Fake Call
 

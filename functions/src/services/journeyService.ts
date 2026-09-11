@@ -1,9 +1,11 @@
 import { COLLECTIONS } from "../constants/collectionNames";
 import { getFirestore } from "../config/firebaseAdmin";
 import {
+  DEFAULT_STOP_ALERT_DISTANCE_METERS,
   GeoPointLike,
   JourneyModel,
   JourneyStatus,
+  JourneyStopAlert,
   JourneyType,
 } from "../models/journey.model";
 import {
@@ -27,6 +29,11 @@ export interface JourneyInput {
     required?: boolean;
     responseDeadlineSeconds?: number;
     respondedAt?: string | null;
+  };
+  stopAlert?: {
+    enabled?: boolean;
+    alertDistanceMeters?: number;
+    alertedAt?: string | null;
   };
   metadata?: Record<string, unknown>;
   schemaVersion?: number;
@@ -68,6 +75,36 @@ function toGeoPointLike(location?: LocationInput): GeoPointLike | undefined {
   return normalizeLocation(location);
 }
 
+/**
+ * Reads a `stopAlert` map, or returns undefined when the journey does not have
+ * one. A journey without this map is an ordinary timer journey, which keeps
+ * every journey written before Smart Stop Alert existed valid.
+ */
+function readStopAlert(value: unknown): JourneyStopAlert | undefined {
+  if (!isRecord(value) || value.enabled !== true) {
+    return undefined;
+  }
+
+  return {
+    enabled: true,
+    alertDistanceMeters: readPositiveNumber(
+      value.alertDistanceMeters,
+      DEFAULT_STOP_ALERT_DISTANCE_METERS,
+    ),
+    alertedAt: readString(value.alertedAt) || null,
+  };
+}
+
+/**
+ * Whether this journey watches the distance to a drop-off rather than counting
+ * down a safety timer.
+ */
+export function isStopAlertRide(
+  journey: Pick<JourneyModel, "stopAlert">,
+): boolean {
+  return journey.stopAlert?.enabled === true;
+}
+
 function buildDestination(input: JourneyInput): GeoPointLike | undefined {
   if (input.destination) {
     return {
@@ -94,7 +131,11 @@ export function validateJourneyInput(input: JourneyInput): ValidationResult {
     errors.push(...locationValidation.errors);
   }
 
+  // A Smart Stop Alert ride has no duration to validate: a rider cannot
+  // predict how long a bus takes, which is the reason they asked to be warned
+  // by distance instead. Those rides legitimately store 0.
   if (
+    !readStopAlert(input.stopAlert) &&
     input.estimatedDurationMinutes !== undefined &&
     readPositiveNumber(input.estimatedDurationMinutes, 0) <= 0
   ) {
@@ -140,10 +181,12 @@ export function buildJourneyPayload(input: JourneyInput, userId: string): Journe
   }
 
   const now = new Date();
-  const estimatedDurationMinutes = readPositiveNumber(
-    input.estimatedDurationMinutes,
-    30,
-  );
+  const stopAlert = readStopAlert(input.stopAlert);
+  // A stop alert ride has no countdown, so it must not be given an invented
+  // 30-minute deadline that would later read as an expired safety journey.
+  const estimatedDurationMinutes = stopAlert
+    ? 0
+    : readPositiveNumber(input.estimatedDurationMinutes, 30);
   const estimatedEndTime =
     input.estimatedEndTime ??
     new Date(now.getTime() + estimatedDurationMinutes * 60 * 1000).toISOString();
@@ -160,11 +203,14 @@ export function buildJourneyPayload(input: JourneyInput, userId: string): Journe
     estimatedDurationMinutes,
     estimatedEndTime,
     safetyCheck: {
-      required: input.safetyCheck?.required ?? true,
+      // A stop alert ride has no deadline to answer for, so its safety check
+      // defaults off unless the caller explicitly asked for one.
+      required: input.safetyCheck?.required ?? !stopAlert,
       responseDeadlineSeconds:
         input.safetyCheck?.responseDeadlineSeconds ?? 30,
       respondedAt: input.safetyCheck?.respondedAt ?? null,
     },
+    ...(stopAlert ? { stopAlert } : {}),
     metadata: isRecord(input.metadata) ? input.metadata : {},
     schemaVersion: readPositiveNumber(input.schemaVersion, 1),
     createdAt: now.toISOString(),
@@ -200,6 +246,11 @@ export function normalizeJourney(
       ),
       respondedAt: readString(safetyCheck.respondedAt) || null,
     },
+    // Carried through rather than dropped: normalizing a bus ride and writing
+    // it back must not erase the rider's alarm settings mid-journey.
+    ...(readStopAlert(data.stopAlert)
+      ? { stopAlert: readStopAlert(data.stopAlert) }
+      : {}),
     metadata: isRecord(data.metadata) ? data.metadata : {},
     schemaVersion: readNumber(data.schemaVersion, 1),
     createdAt: readString(data.createdAt, now),
@@ -230,6 +281,15 @@ export async function getJourney(journeyId: string): Promise<JourneyModel | null
 
 export function hasJourneyExpired(journey: JourneyModel, now = new Date()): boolean {
   if (journey.status !== "active" || !journey.estimatedEndTime) {
+    return false;
+  }
+
+  // A Smart Stop Alert ride can never expire: it has no deadline, and its
+  // estimatedEndTime is only a placeholder equal to when the ride started.
+  // Without this, every bus ride would read as expired the moment it began and
+  // `onJourneyUpdated` would send the rider a safety check they never asked
+  // for, seconds after boarding.
+  if (isStopAlertRide(journey)) {
     return false;
   }
 

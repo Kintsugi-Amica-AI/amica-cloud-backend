@@ -15,6 +15,23 @@ export interface JourneySafetyCheck {
   respondedAt?: string | null;
 }
 
+/**
+ * Smart Stop Alert settings on a bus ride.
+ *
+ * Present only on rides started from the mobile Bus Stop Alert flow, which
+ * watch the distance to `destination` instead of counting down a safety timer.
+ * Absent on ordinary timer journeys.
+ */
+export interface JourneyStopAlert {
+  enabled: boolean;
+  /** How close to the drop-off the alarm sounds. */
+  alertDistanceMeters: number;
+  /** Null until the approaching-stop alarm has sounded for this ride. */
+  alertedAt?: string | null;
+}
+
+export const DEFAULT_STOP_ALERT_DISTANCE_METERS = 2000;
+
 export interface JourneyModel {
   id: string;
   userId: string;
@@ -27,6 +44,7 @@ export interface JourneyModel {
   estimatedEndTime?: string;
   actualEndTime?: string;
   safetyCheck?: JourneySafetyCheck;
+  stopAlert?: JourneyStopAlert;
   metadata: Record<string, unknown>;
   schemaVersion: number;
   createdAt: string;

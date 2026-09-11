@@ -200,6 +200,10 @@ Optional and extendable fields:
   - `required`: boolean
   - `responseDeadlineSeconds`: number
   - `respondedAt`: timestamp
+- `stopAlert`: map
+  - `enabled`: boolean
+  - `alertDistanceMeters`: number
+  - `alertedAt`: timestamp
 - `metadata`: map
 - `schemaVersion`: number
 
@@ -209,8 +213,55 @@ Recommended default values:
 - `status`: `active`
 - `safetyCheck.required`: `true`
 - `safetyCheck.responseDeadlineSeconds`: `30`
+- `stopAlert`: `{}` (absent on ordinary timer journeys)
 - `metadata`: `{}`
 - `schemaVersion`: `1`
+
+### Smart Stop Alert rides
+
+Smart Stop Alert is implemented on this collection, using `destination` and `journeyType` as planned. A bus ride that watches the distance to a drop-off is an ordinary `journeys` document with:
+
+- `journeyType`: `bus`
+- `destination`: the drop-off point, with `latitude` and `longitude` set
+- `stopAlert.enabled`: `true`
+- `stopAlert.alertDistanceMeters`: how close to the drop-off the alarm sounds, `2000` by default
+- `stopAlert.alertedAt`: `null` until the alarm sounds, then a timestamp
+- `safetyCheck.required`: `false`, because this ride has no timer deadline to answer for
+- `estimatedDurationMinutes`: `0`, since the rider cannot predict a bus journey's length
+
+The mobile app tells the two kinds of journey apart by `stopAlert.enabled`, so the Smart Journey Timer and the Bus Stop Alert never pick up each other's documents. A document without a `stopAlert` map is an ordinary timer journey, which keeps every existing journey valid.
+
+Example:
+
+```json
+{
+  "id": "journey-2",
+  "userId": "sample-user-1",
+  "journeyType": "bus",
+  "status": "active",
+  "destination": {
+    "latitude": 6.9036,
+    "longitude": 79.9547,
+    "address": "Malabe",
+    "name": "Malabe"
+  },
+  "estimatedDurationMinutes": 0,
+  "safetyCheck": {
+    "required": false,
+    "responseDeadlineSeconds": 30,
+    "respondedAt": null
+  },
+  "stopAlert": {
+    "enabled": true,
+    "alertDistanceMeters": 2000,
+    "alertedAt": null
+  },
+  "metadata": {},
+  "schemaVersion": 1,
+  "createdAt": "2026-01-01T18:00:00.000Z",
+  "updatedAt": "2026-01-01T18:00:00.000Z"
+}
+```
 
 Example:
 
@@ -253,7 +304,6 @@ Example:
 
 Future extension notes:
 
-- Smart Stop Alert can use `destination` and `journeyType`.
 - Live tracking can later store location history in a separate subcollection.
 - Route drawing can later be added using Google Directions API.
 - Risk zones can later be calculated from anonymized SOS locations.
