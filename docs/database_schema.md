@@ -19,6 +19,14 @@ The schema is designed so future safety features can be added without breaking t
 | `journeys` | Stores Smart Journey Timer sessions. |
 | `sos_alerts` | Stores SOS alerts triggered by manual, timer, voice, or future features. |
 | `vehicles` | Stores sample vehicle safety records for Scan Before You Ride. |
+| `vehicle_reviews` | One private passenger review per completed vehicle journey. |
+| `vehicle_safety_events` | One unverified unanswered-check event per vehicle journey. |
+
+Vehicle journeys store the confirmed canonical registration in the immutable
+`metadata.vehiclePlate` field. Vehicles may now contain `ratingTotal`, `ratingCount`,
+`ratingAverage`, and `unverifiedSafetyCheckCount` (default zero). Only server triggers
+update these aggregates. See [Scan Vehicle schema and setup](scan_vehicle_setup.md)
+for record fields, ownership rules, defaults, examples and demo imports.
 
 ## users
 
@@ -36,6 +44,9 @@ Required fields:
 Optional and extendable fields:
 
 - `secretPhrase`: string
+- `secretPhrases`: optional array of up to ten normalized unique phrases. New
+  mobile settings saves this array and mirrors the first entry into `secretPhrase`
+  for legacy clients. All entries use the user's configured voice SOS message.
 - `role`: `user | admin | tester`
 - `status`: `active | disabled`
 - `schemaVersion`: number

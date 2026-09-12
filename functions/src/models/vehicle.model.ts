@@ -6,6 +6,10 @@ export interface VehicleModel {
   normalizedPlateNumber: string;
   status: VehicleStatus;
   reportsCount: number;
+  ratingTotal?: number;
+  ratingCount?: number;
+  ratingAverage?: number;
+  unverifiedSafetyCheckCount?: number;
   riskLevel: VehicleRiskLevel;
   notes?: string;
   lastCheckedAt?: string;

@@ -1,0 +1,6 @@
+[
+  {"plateNumber":"WP NC 9024","normalizedPlateNumber":"NC9024","status":"unknown","reportsCount":0,"riskLevel":"unknown","ratingTotal":18,"ratingCount":4,"ratingAverage":4.5,"notes":"Fictional demo feedback, not a verified driver record.","metadata":{"demo":true},"schemaVersion":1},
+  {"plateNumber":"CBR 6797","normalizedPlateNumber":"CBR6797","status":"unknown","reportsCount":0,"riskLevel":"unknown","ratingTotal":19,"ratingCount":5,"ratingAverage":3.8,"notes":"Fictional demo feedback, not a verified driver record.","metadata":{"demo":true},"schemaVersion":1},
+  {"plateNumber":"CBO 3286","normalizedPlateNumber":"CBO3286","status":"unknown","reportsCount":0,"riskLevel":"unknown","ratingTotal":10,"ratingCount":2,"ratingAverage":5,"notes":"Fictional demo feedback, not a verified driver record.","metadata":{"demo":true},"schemaVersion":1},
+  {"plateNumber":"CBR 6307","normalizedPlateNumber":"CBR6307","status":"unknown","reportsCount":0,"riskLevel":"unknown","ratingTotal":9,"ratingCount":3,"ratingAverage":3,"notes":"Fictional demo feedback, not a verified driver record.","metadata":{"demo":true},"schemaVersion":1}
+]

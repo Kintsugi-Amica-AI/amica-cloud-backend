@@ -44,7 +44,9 @@ service cloud.firestore {
     match /journeys/{journeyId} {
       // Create/update must keep userId equal to the current user's Firebase Auth UID.
       allow create: if ownsIncomingDocument();
-      allow update: if ownsExistingDocument() && ownsIncomingDocument();
+      allow update: if ownsExistingDocument() && ownsIncomingDocument()
+        && request.resource.data.get('metadata', {}).get('vehiclePlate', '')
+          == resource.data.get('metadata', {}).get('vehiclePlate', '');
 
       // Read/delete only allow documents already owned by the current user.
       allow read, delete: if ownsExistingDocument();
@@ -69,7 +71,42 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // One immutable passenger review per completed journey. Only the server
+    // updates vehicle aggregates; clients cannot choose a different plate.
+    match /vehicle_reviews/{journeyId} {
+      allow get: if isSignedIn() && (
+        !exists(/databases/$(database)/documents/vehicle_reviews/$(journeyId))
+        || ownsExistingDocument());
+      allow list: if ownsExistingDocument();
+      allow create: if ownsIncomingDocument()
+        && request.resource.data.keys().hasOnly([
+          'userId', 'vehiclePlate', 'stars', 'createdAt'
+        ])
+        && request.resource.data.stars is int
+        && request.resource.data.stars >= 1 && request.resource.data.stars <= 5
+        && request.resource.data.createdAt == request.time
+        && get(/databases/$(database)/documents/journeys/$(journeyId)).data.userId == request.auth.uid
+        && get(/databases/$(database)/documents/journeys/$(journeyId)).data.status == 'safe'
+        && get(/databases/$(database)/documents/journeys/$(journeyId)).data.metadata.vehiclePlate == request.resource.data.vehiclePlate;
+      allow update, delete: if false;
+    }
+
     // Deny every future collection until explicit rules are reviewed and added.
+    match /vehicle_safety_events/{journeyId} {
+      allow get: if isSignedIn() && (
+        !exists(/databases/$(database)/documents/vehicle_safety_events/$(journeyId))
+        || ownsExistingDocument());
+      allow list: if ownsExistingDocument();
+      allow create: if ownsIncomingDocument()
+        && request.resource.data.keys().hasOnly(['userId', 'vehiclePlate', 'type', 'createdAt'])
+        && request.resource.data.type == 'unanswered_safety_check'
+        && request.resource.data.createdAt == request.time
+        && get(/databases/$(database)/documents/journeys/$(journeyId)).data.userId == request.auth.uid
+        && get(/databases/$(database)/documents/journeys/$(journeyId)).data.metadata.vehiclePlate == request.resource.data.vehiclePlate
+        && request.time >= get(/databases/$(database)/documents/journeys/$(journeyId)).data.estimatedEndTime + duration.value(180, 's');
+      allow update, delete: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
