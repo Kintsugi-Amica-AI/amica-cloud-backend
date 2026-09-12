@@ -5,6 +5,8 @@ import { isValidLatitude, isValidLongitude } from "./utils/locationUtils";
 
 export { onJourneyUpdated } from "./triggers/onJourneyUpdated";
 export { onSosAlertCreated } from "./triggers/onSosAlertCreated";
+export { onVehicleReviewCreated } from "./triggers/onVehicleReviewCreated";
+export { onVehicleSafetyEventCreated } from "./triggers/onVehicleSafetyEventCreated";
 
 /**
  * Road distance between two points, for the mobile Smart Stop Alert.

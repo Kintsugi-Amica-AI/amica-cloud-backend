@@ -2,6 +2,18 @@
 
 Firebase backend scaffolding for Amica safety workflows.
 
+## Scan Vehicle Ratings
+
+Vehicle journeys retain the confirmed registration in `journeys.metadata.vehiclePlate`.
+Immutable `vehicle_reviews/{journeyId}` documents accept one 1-5 star review from
+the owner of a completed journey. A transactional Cloud Function updates the vehicle
+average once even if Firebase delivers an event repeatedly. Clients cannot write
+vehicle aggregates. Unanswered safety checks are counted separately as unverified
+events, not automatic proof against a driver.
+
+See [Scan Vehicle setup](docs/scan_vehicle_setup.md) for development sample imports,
+deployment dependencies, schema and testing. Never commit credentials.
+
 Amica is a women's safety and security MVP. The backend supports the mobile app features needed for the university prototype:
 
 - Firebase Authentication user profile storage
