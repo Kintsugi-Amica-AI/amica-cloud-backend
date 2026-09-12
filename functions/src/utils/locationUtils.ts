@@ -42,6 +42,40 @@ export function normalizeLocation(location?: LocationInput | null): NormalizedLo
   };
 }
 
+const EARTH_RADIUS_METERS = 6371000;
+
+function toRadians(degrees: number): number {
+  return (degrees * Math.PI) / 180;
+}
+
+/**
+ * Great-circle distance between two coordinates, in metres.
+ *
+ * This is straight-line distance, which is always shorter than the distance a
+ * bus actually drives. Callers that need road distance should use the route
+ * service instead.
+ */
+export function distanceInMeters(
+  startLatitude: number,
+  startLongitude: number,
+  endLatitude: number,
+  endLongitude: number,
+): number {
+  const latDistance = toRadians(endLatitude - startLatitude);
+  const lonDistance = toRadians(endLongitude - startLongitude);
+  const startLat = toRadians(startLatitude);
+  const endLat = toRadians(endLatitude);
+
+  const a =
+    Math.sin(latDistance / 2) * Math.sin(latDistance / 2) +
+    Math.cos(startLat) *
+      Math.cos(endLat) *
+      Math.sin(lonDistance / 2) *
+      Math.sin(lonDistance / 2);
+
+  return EARTH_RADIUS_METERS * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 export function validateLocation(location?: LocationInput | null): LocationValidationResult {
   const errors: string[] = [];
 

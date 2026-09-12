@@ -86,9 +86,23 @@ The mobile app saves current location into:
 - `journeys.currentLocation`
 - `sos_alerts.location`
 
-Live tracking history is planned later and should use a separate subcollection or collection. Route drawing, Google Directions API usage, background location tracking, and real notification dispatch are not implemented in this MVP foundation.
+Live tracking history is planned later and should use a separate subcollection or collection. Route drawing and real notification dispatch are not implemented in this MVP foundation.
 
 Do not commit Google Maps API keys, Firebase service account files, private keys, access tokens, `.env` files, or real user location exports.
+
+## Smart Stop Alert
+
+A rider picks the stop they are getting off at before boarding a bus, and the mobile app alarms when they come within a chosen distance of it, 2 km by default. It is implemented and extends `journeys` rather than adding a collection, as `docs/schema_evolution.md` planned.
+
+A stop alert ride is an ordinary `journeys` document with `journeyType` of `bus`, a `destination` carrying coordinates, and a `stopAlert` map holding the alarm settings. `stopAlert.enabled` is the only thing separating it from a timer journey, so backend code reading `journeys` must not assume an active journey has a countdown. In particular:
+
+- `hasJourneyExpired` always returns false for these rides. Their `estimatedEndTime` is only a placeholder, so without this every bus ride would read as expired the moment it began and `onJourneyUpdated` would send the rider a safety check seconds after boarding.
+- `estimatedDurationMinutes` of `0` is valid on these rides and is not validated as a positive duration.
+- `normalizeJourney` carries `stopAlert` through. Dropping it on a read-modify-write would erase the rider's alarm settings mid-ride.
+
+The `getRouteDistance` callable function optionally reports road distance so the alert distance means bus travel rather than straight-line distance. It needs a `GOOGLE_DIRECTIONS_API_KEY`; see `docs/firebase_setup.md`. Without one it returns `{ "available": false }` and the app falls back to straight-line distance, sounding the alarm slightly early rather than late.
+
+The alarm itself never calls the backend. The route is resolved once before the ride starts, and the device applies the result offline for the rest of the journey, so a bus in a tunnel or a dead zone still gets its alarm.
 
 ## Fake Call and Voice SOS Backend
 
