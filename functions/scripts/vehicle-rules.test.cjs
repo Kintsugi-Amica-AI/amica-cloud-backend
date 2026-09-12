@@ -1,7 +1,7 @@
 const { readFileSync } = require('node:fs');
 const { strict: assert } = require('node:assert');
 const { test, before, after } = require('node:test');
-const { initializeTestEnvironment, assertFails, assertSucceeds } = require('@firebase/rules-unit-testing');
+const { initializeTestEnvironment } = require('@firebase/rules-unit-testing');
 const { doc, setDoc, updateDoc, getDoc, Timestamp, serverTimestamp } = require('firebase/firestore');
 let env;
 before(async () => {
@@ -26,32 +26,32 @@ const review = (overrides = {}) => ({
 });
 test('owner can read missing review, create it once, but not change it', async () => {
   const ref = doc(env.authenticatedContext('alice').firestore(), 'vehicle_reviews', 'completed');
-  await assertSucceeds(getDoc(ref));
-  await assertSucceeds(setDoc(ref, review()));
-  await assertFails(updateDoc(ref, { stars: 1 }));
-  await assertFails(getDoc(doc(env.authenticatedContext('bob').firestore(), 'vehicle_reviews', 'completed')));
+  await assert.doesNotReject(getDoc(ref));
+  await assert.doesNotReject(setDoc(ref, review()));
+  await assert.rejects(updateDoc(ref, { stars: 1 }), { code: 'permission-denied' });
+  await assert.rejects(getDoc(doc(env.authenticatedContext('bob').firestore(), 'vehicle_reviews', 'completed')), { code: 'permission-denied' });
 });
 test('reject another user, incomplete journey, wrong plate, or invalid stars', async () => {
   const alice = env.authenticatedContext('alice').firestore();
-  await assertFails(setDoc(doc(env.authenticatedContext('bob').firestore(), 'vehicle_reviews', 'wrong-plate'), review({ userId: 'bob' })));
-  await assertFails(setDoc(doc(alice, 'vehicle_reviews', 'active'), review()));
-  await assertFails(setDoc(doc(alice, 'vehicle_reviews', 'wrong-plate'), review({ vehiclePlate: 'CBO3286' })));
+  await assert.rejects(setDoc(doc(env.authenticatedContext('bob').firestore(), 'vehicle_reviews', 'wrong-plate'), review({ userId: 'bob' })), { code: 'permission-denied' });
+  await assert.rejects(setDoc(doc(alice, 'vehicle_reviews', 'active'), review()), { code: 'permission-denied' });
+  await assert.rejects(setDoc(doc(alice, 'vehicle_reviews', 'wrong-plate'), review({ vehiclePlate: 'CBO3286' })), { code: 'permission-denied' });
   for (const stars of [0, 6, 2.5]) {
-    await assertFails(setDoc(doc(alice, 'vehicle_reviews', 'bad-stars'), review({ stars })));
+    await assert.rejects(setDoc(doc(alice, 'vehicle_reviews', 'bad-stars'), review({ stars })), { code: 'permission-denied' });
   }
 });
 test('aggregate and journey plate cannot be changed by clients', async () => {
   const db = env.authenticatedContext('alice').firestore();
-  await assertFails(setDoc(doc(db, 'vehicles', 'CBR6797'), { ratingAverage: 5 }));
-  await assertFails(updateDoc(doc(db, 'journeys', 'active'), { 'metadata.vehiclePlate': 'CBO3286' }));
+  await assert.rejects(setDoc(doc(db, 'vehicles', 'CBR6797'), { ratingAverage: 5 }), { code: 'permission-denied' });
+  await assert.rejects(updateDoc(doc(db, 'journeys', 'active'), { 'metadata.vehiclePlate': 'CBO3286' }), { code: 'permission-denied' });
 });
 test('unverified events require the deadline, plate and owner', async () => {
   const db = env.authenticatedContext('alice').firestore();
   const event = { userId: 'alice', vehiclePlate: 'CBR6797', type: 'unanswered_safety_check', createdAt: serverTimestamp() };
-  await assertFails(setDoc(doc(db, 'vehicle_safety_events', 'future'), event));
-  await assertSucceeds(setDoc(doc(db, 'vehicle_safety_events', 'completed'), event));
-  await assertFails(updateDoc(doc(db, 'vehicle_safety_events', 'completed'), { type: 'different' }));
-  await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(), 'vehicle_safety_events', 'completed')));
+  await assert.rejects(setDoc(doc(db, 'vehicle_safety_events', 'future'), event), { code: 'permission-denied' });
+  await assert.doesNotReject(setDoc(doc(db, 'vehicle_safety_events', 'completed'), event));
+  await assert.rejects(updateDoc(doc(db, 'vehicle_safety_events', 'completed'), { type: 'different' }), { code: 'permission-denied' });
+  await assert.rejects(getDoc(doc(env.unauthenticatedContext().firestore(), 'vehicle_safety_events', 'completed')), { code: 'permission-denied' });
 });
 
 test('duplicate trigger delivery aggregates each journey once', async () => {

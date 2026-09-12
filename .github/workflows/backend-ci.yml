@@ -33,7 +33,7 @@ jobs:
           java-version: '21'
 
       - name: Test vehicle ownership rules
-        run: npx --yes firebase-tools@14 emulators:exec --only firestore --project demo-amica-vehicle-rules --config firebase.rules-test.json "npm --prefix functions run test:rules:unit"
+        run: npx --yes --ignore-scripts --package=firebase-tools@14.27.0 firebase emulators:exec --only firestore --project demo-amica-vehicle-rules --config firebase.rules-test.json "npm --prefix functions run test:rules:unit"
 
       - name: Set up Python
         uses: actions/setup-python@v5
