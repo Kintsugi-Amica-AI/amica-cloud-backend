@@ -26,6 +26,15 @@ jobs:
         working-directory: functions
         run: npm test --if-present
 
+      - name: Set up Java for Firestore emulator
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Test vehicle ownership rules
+        run: npx --yes firebase-tools@14 emulators:exec --only firestore --project demo-amica-vehicle-rules --config firebase.rules-test.json "npm --prefix functions run test:rules:unit"
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
