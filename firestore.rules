@@ -23,9 +23,19 @@ service cloud.firestore {
         .hasOnly(["status", "updatedAt"]);
     }
 
+    // A profile may only claim `phoneVerified: true` for the number that is
+    // actually linked to the Firebase Auth account (proved by SMS code), so
+    // a client cannot mark an arbitrary number as verified.
+    function phoneVerificationIsGenuine() {
+      return request.resource.data.get('phoneVerified', false) != true
+        || request.resource.data.get('phone', '')
+          == request.auth.token.get('phone_number', '');
+    }
+
     // Users can only read or update their own profile document.
     match /users/{userId} {
-      allow read, create, update, delete: if isOwner(userId);
+      allow read, delete: if isOwner(userId);
+      allow create, update: if isOwner(userId) && phoneVerificationIsGenuine();
     }
 
     // Emergency contacts are private to the authenticated user who owns them.
