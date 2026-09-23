@@ -43,6 +43,11 @@ export interface TransitLeg {
   toName: string;
   /** Bus route / train line when known ("138", "Coast Line"). */
   lineName: string;
+  /** For rides: what she rides — "bus" or "train". Empty for walks. */
+  vehicle: "bus" | "train" | "";
+  /** Where the leg starts / ends (for drawing feeder-bus stops). */
+  from?: RoutePoint;
+  to?: RoutePoint;
 }
 
 export interface TransitPlan {
@@ -74,6 +79,13 @@ const WALK_SPEED_KMH = 4.8;
 
 /** Walks shorter than this are left out — you are already at the stop. */
 const MIN_WALK_METERS = 40;
+
+/**
+ * Longer than this and nobody should be told to walk to (or from) a train
+ * station: the plan takes a bus for that stretch instead. Stations are far
+ * apart, so this happens a lot on train trips.
+ */
+const MAX_ACCESS_WALK_METERS = 1200;
 
 const PLACE_TYPES: Record<TransitMode, string[]> = {
   bus: ["bus_stop", "bus_station"],
@@ -128,6 +140,7 @@ function straightLeg(
   speedKmh: number,
   fromName: string,
   toName: string,
+  vehicle: "bus" | "train" | "" = "",
 ): TransitLeg {
   const meters = distanceInMeters(
     from.latitude,
@@ -145,7 +158,21 @@ function straightLeg(
     fromName,
     toName,
     lineName: "",
+    vehicle,
+    from: point(from),
+    to: point(to),
   };
+}
+
+function point(p: RoutePoint): RoutePoint {
+  return { latitude: p.latitude, longitude: p.longitude };
+}
+
+const BUS_VEHICLES = new Set(["BUS", "INTERCITY_BUS", "TROLLEYBUS", "SHARE_TAXI"]);
+
+/** Routes API vehicle type → what the app shows. */
+function vehicleOf(type: string | undefined): "bus" | "train" {
+  return type && BUS_VEHICLES.has(type) ? "bus" : "train";
 }
 
 // ── Stops ─────────────────────────────────────────────────────────────────
@@ -293,7 +320,11 @@ interface RoutesTransitStep {
       departureStop?: { name?: string; location?: { latLng?: RoutePoint } };
       arrivalStop?: { name?: string; location?: { latLng?: RoutePoint } };
     };
-    transitLine?: { name?: string; nameShort?: string };
+    transitLine?: {
+      name?: string;
+      nameShort?: string;
+      vehicle?: { type?: string };
+    };
   };
 }
 
@@ -311,6 +342,7 @@ export function parseTransitRoute(
   body: unknown,
   originName: string,
   destinationName: string,
+  mode: TransitMode = "bus",
 ): { legs: TransitLeg[]; board: TransitStop; alight: TransitStop } | null {
   const steps = (
     body as { routes?: { legs?: { steps?: RoutesTransitStep[] }[] }[] } | null
@@ -329,10 +361,16 @@ export function parseTransitRoute(
       const depLoc = dep?.location?.latLng;
       const arrLoc = arr?.location?.latLng;
       if (!depLoc || !arrLoc) continue;
-      if (!board) {
+      const vehicle = vehicleOf(step.transitDetails.transitLine?.vehicle?.type);
+      // On a train trip, the stations are the train's own stops; any bus
+      // before or after is just how she gets to / from them.
+      const isMain = mode === "bus" || vehicle === "train";
+      if (isMain && !board) {
         board = { id: `transit:${dep?.name ?? "board"}`, name: dep?.name ?? "Stop", latitude: depLoc.latitude, longitude: depLoc.longitude, distanceMeters: 0 };
       }
-      alight = { id: `transit:${arr?.name ?? "alight"}`, name: arr?.name ?? "Stop", latitude: arrLoc.latitude, longitude: arrLoc.longitude, distanceMeters: 0 };
+      if (isMain) {
+        alight = { id: `transit:${arr?.name ?? "alight"}`, name: arr?.name ?? "Stop", latitude: arrLoc.latitude, longitude: arrLoc.longitude, distanceMeters: 0 };
+      }
       legs.push({
         kind: "ride",
         distanceMeters: step.distanceMeters ?? 0,
@@ -344,6 +382,9 @@ export function parseTransitRoute(
           step.transitDetails.transitLine?.nameShort ??
           step.transitDetails.transitLine?.name ??
           "",
+        vehicle,
+        from: point(depLoc),
+        to: point(arrLoc),
       });
     } else {
       const last = legs[legs.length - 1];
@@ -360,6 +401,7 @@ export function parseTransitRoute(
           fromName: "",
           toName: "",
           lineName: "",
+          vehicle: "",
         });
       }
     }
@@ -401,6 +443,7 @@ async function fetchTransitRoute(
           "routes.legs.steps.transitDetails.stopDetails",
           "routes.legs.steps.transitDetails.transitLine.name",
           "routes.legs.steps.transitDetails.transitLine.nameShort",
+          "routes.legs.steps.transitDetails.transitLine.vehicle.type",
         ].join(","),
       },
       body: JSON.stringify({
@@ -408,8 +451,11 @@ async function fetchTransitRoute(
         destination: { location: { latLng: destination } },
         travelMode: "TRANSIT",
         transitPreferences: {
+          // A train trip may well start or end with a bus to the station.
           allowedTravelModes:
-            mode === "bus" ? ["BUS"] : ["TRAIN", "RAIL", "SUBWAY", "LIGHT_RAIL"],
+            mode === "bus"
+              ? ["BUS"]
+              : ["TRAIN", "RAIL", "SUBWAY", "LIGHT_RAIL", "BUS"],
         },
       }),
     },
@@ -419,7 +465,7 @@ async function fetchTransitRoute(
     console.warn(`getTransitPlan: Routes TRANSIT ${response.status}`, body);
     return null;
   }
-  return parseTransitRoute(body, "Start", "Destination");
+  return parseTransitRoute(body, "", "", mode);
 }
 
 // ── Composed (estimated) routes ──────────────────────────────────────────
@@ -444,7 +490,65 @@ async function walkLeg(
     fromName,
     toName,
     lineName: "",
+    vehicle: "",
+    from: point(from),
+    to: point(to),
   };
+}
+
+/**
+ * Getting between a point and a train station. Walk when it is close;
+ * otherwise take a bus: walk to the nearest bus stop, ride to the stop
+ * nearest the station, walk the last bit. If no suitable bus stops are
+ * found, fall back to a single road leg ("take a bus or tuk-tuk").
+ */
+async function accessLegs(
+  from: RoutePoint,
+  to: RoutePoint,
+  fromName: string,
+  toName: string,
+  key: string,
+): Promise<TransitLeg[]> {
+  const straight = distanceInMeters(from.latitude, from.longitude, to.latitude, to.longitude);
+  if (straight <= MAX_ACCESS_WALK_METERS) {
+    const walk = await walkLeg(from, to, fromName, toName);
+    return walk ? [walk] : [];
+  }
+
+  const [nearFrom, nearTo] = await Promise.all([
+    findStops(from, "bus", key),
+    findStops(to, "bus", key),
+  ]);
+  const busOn = nearFrom[0];
+  const busOff = nearTo.find((s) => s.id !== busOn?.id);
+  if (busOn && busOff) {
+    const [walkIn, ride, walkOut] = await Promise.all([
+      walkLeg(from, busOn, fromName, busOn.name),
+      rideLeg(busOn, busOff, "bus"),
+      walkLeg(busOff, to, busOff.name, toName),
+    ]);
+    return [walkIn, ride, walkOut].filter((l): l is TransitLeg => l !== null);
+  }
+
+  // No stops found: still don't send her on a long walk.
+  const road = await fetchJourneyRoute(from, to, "driving").catch(() => null);
+  if (road) {
+    return [
+      {
+        kind: "ride",
+        distanceMeters: road.distanceMeters,
+        durationSeconds: Math.round(road.durationSeconds * 1.5),
+        polylines: [road.polyline],
+        fromName: "",
+        toName,
+        lineName: "",
+        vehicle: "bus",
+        from: point(from),
+        to: point(to),
+      },
+    ];
+  }
+  return [straightLeg("ride", from, to, RIDE_SPEED_KMH.bus, "", toName, "bus")];
 }
 
 async function rideLeg(
@@ -465,11 +569,14 @@ async function rideLeg(
         fromName: from.name,
         toName: to.name,
         lineName: "",
+        vehicle: "bus",
+        from: point(from),
+        to: point(to),
       };
     }
   }
   // Trains do not follow roads; draw the station-to-station line.
-  return straightLeg("ride", from, to, RIDE_SPEED_KMH[mode], from.name, to.name);
+  return straightLeg("ride", from, to, RIDE_SPEED_KMH[mode], from.name, to.name, mode);
 }
 
 function pick(
@@ -550,14 +657,19 @@ export async function planTransitTrip(
       return { available: false, reason: "no-stops" };
     }
 
-    const [walkIn, ride, walkOut] = await Promise.all([
-      walkLeg(origin, board, "", board.name),
+    // Bus trips: stops are within walking distance by construction.
+    // Train trips: stations can be kilometres away, so the ends may be a
+    // bus ride (see accessLegs).
+    const [legsIn, ride, legsOut] = await Promise.all([
+      mode === "train"
+        ? accessLegs(origin, board, "", board.name, key)
+        : walkLeg(origin, board, "", board.name).then((l) => (l ? [l] : [])),
       rideLeg(board, alight, mode),
-      walkLeg(alight, destination, alight.name, ""),
+      mode === "train"
+        ? accessLegs(alight, destination, alight.name, "", key)
+        : walkLeg(alight, destination, alight.name, "").then((l) => (l ? [l] : [])),
     ]);
-    const legs = [walkIn, ride, walkOut].filter(
-      (l): l is TransitLeg => l !== null,
-    );
+    const legs = [...legsIn, ride, ...legsOut];
 
     return {
       available: true,
