@@ -5,6 +5,7 @@ import {
   fetchJourneyRoute,
   readJourneyRouteMode,
 } from "./services/routeService";
+import { planTransitTrip, readTransitMode } from "./services/transitService";
 import { isValidLatitude, isValidLongitude } from "./utils/locationUtils";
 
 export { onJourneyUpdated } from "./triggers/onJourneyUpdated";
@@ -117,6 +118,58 @@ export const getJourneyRoute = onCall(async (request) => {
   }
 
   return { available: true, ...route };
+});
+
+/**
+ * Bus / train trip plan: which stop to get on at, which to get off at, and
+ * the walks to and from them. Used by Walk/Ride with me (bus or train
+ * journeys) and by the Smart Stop Alert, which alarms for the get-off stop.
+ *
+ * `mode` is "bus" (default) or "train". Optional `boardStopId` /
+ * `alightStopId` pick one of the returned candidate stops instead of the
+ * nearest. Returns `{ available: false, reason }` rather than failing.
+ */
+export const getTransitPlan = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Sign in to plan a trip.");
+  }
+
+  const {
+    originLatitude,
+    originLongitude,
+    destinationLatitude,
+    destinationLongitude,
+    mode,
+    boardStopId,
+    alightStopId,
+  } = (request.data ?? {}) as Record<string, unknown>;
+
+  if (
+    !isValidLatitude(originLatitude) ||
+    !isValidLongitude(originLongitude) ||
+    !isValidLatitude(destinationLatitude) ||
+    !isValidLongitude(destinationLongitude)
+  ) {
+    throw new HttpsError(
+      "invalid-argument",
+      "Origin and destination coordinates are required.",
+    );
+  }
+
+  const result = await planTransitTrip(
+    { latitude: originLatitude as number, longitude: originLongitude as number },
+    {
+      latitude: destinationLatitude as number,
+      longitude: destinationLongitude as number,
+    },
+    readTransitMode(mode),
+    boardStopId,
+    alightStopId,
+  );
+
+  return result.available
+    ? { available: true, ...result.plan }
+    : { available: false, reason: result.reason };
 });
 
 export const healthCheck = onRequest((_request, response) => {
