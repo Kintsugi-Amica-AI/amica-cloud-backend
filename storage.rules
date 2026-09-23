@@ -1,0 +1,28 @@
+rules_version = '2';
+
+// Cloud Storage is closed except for the first photo of each vehicle.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // vehicle_images/{plate}.jpg — the first photo a rider took of a vehicle
+    // the database had no photo for. Signed-in riders can view it on the plate
+    // result screen. It can be created once and never replaced or deleted from
+    // the app, so the first photo wins and nobody can swap in another car.
+    // (The team removes a bad photo from the console, together with
+    // vehicles/{plate}.image; the next first scan then saves a new one.)
+    match /vehicle_images/{fileName} {
+      allow get: if request.auth != null;
+      allow list: if false;
+      allow create: if request.auth != null
+        && fileName.matches('^([A-Z]{2,3}[0-9]{4}|[0-9]{5,7})[.]jpg$')
+        && request.resource.contentType == 'image/jpeg'
+        && request.resource.size > 0
+        && request.resource.size < 2 * 1024 * 1024;
+      allow update, delete: if false;
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

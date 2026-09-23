@@ -104,9 +104,9 @@ jobs:
             echo "No functions/package.json found. Skipping functions build."
           fi
 
-      - name: Deploy Firestore rules and indexes to dev
+      - name: Deploy Firestore and Storage rules and indexes to dev
         run: |
-          firebase deploy --only firestore:rules,firestore:indexes --project "$FIREBASE_PROJECT_ID_DEV" --non-interactive
+          firebase deploy --only firestore:rules,firestore:indexes,storage --project "$FIREBASE_PROJECT_ID_DEV" --non-interactive
 
       - name: Deploy functions to dev if configured
         run: |

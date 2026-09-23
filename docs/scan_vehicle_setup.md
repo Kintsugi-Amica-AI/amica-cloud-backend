@@ -62,3 +62,26 @@ Run `npm test` for compilation and rating arithmetic tests. Integration testing:
    verify both are cancelled. Test foreground and locked screen separately.
 
 Transactions follow Firebase's [transaction documentation](https://firebase.google.com/docs/firestore/manage-data/transactions).
+
+## First photo of each vehicle
+
+The first time anyone scans a plate that has no photo yet, the app saves the
+camera photo so later riders can see what the vehicle looks like on the plate
+result screen.
+
+- Only live camera scans are saved (never gallery pictures or typed plates).
+- The phone crops the photo to the detected vehicle (the whole photo if no
+  vehicle was found), shrinks it to 1024 px on the long side and re-encodes it,
+  so no EXIF or GPS data is uploaded. No uploader id is stored anywhere.
+- It is uploaded to `vehicle_images/{plate}.jpg`. `storage.rules` let a
+  signed-in rider create that object once and never replace or delete it, so
+  the first photo wins even if two riders scan a new car at the same time.
+- `onVehicleImageUploaded` (Storage trigger) records it on
+  `vehicles/{plate}.image` (`path`, `sizeBytes`, `createdAt`). The app skips the
+  upload whenever that field is present.
+- To remove a bad photo: delete the Storage object and the `image` field in the
+  console. The next first scan saves a new one.
+
+Deploy: `firebase deploy --only storage,functions:onVehicleImageUploaded`.
+Cloud Storage must be enabled for the project (default bucket
+`amica-cloud-backend.firebasestorage.app`).
