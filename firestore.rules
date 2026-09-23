@@ -33,10 +33,21 @@ service cloud.firestore {
           == request.auth.token.get('phone_number', '');
     }
 
+    // True when an update leaves `phone` and `phoneVerified` untouched.
+    // Saving a name or settings must not be re-judged on the phone claim:
+    // a profile verified earlier would otherwise reject every later write
+    // whenever the ID token lacks a matching `phone_number`.
+    function phoneFieldsUnchanged() {
+      return !request.resource.data.diff(resource.data).affectedKeys()
+        .hasAny(['phone', 'phoneVerified']);
+    }
+
     // Users can only read or update their own profile document.
     match /users/{userId} {
       allow read, delete: if isOwner(userId);
-      allow create, update: if isOwner(userId) && phoneVerificationIsGenuine();
+      allow create: if isOwner(userId) && phoneVerificationIsGenuine();
+      allow update: if isOwner(userId)
+        && (phoneFieldsUnchanged() || phoneVerificationIsGenuine());
     }
 
     // Emergency contacts are private to the authenticated user who owns them.
