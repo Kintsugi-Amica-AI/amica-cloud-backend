@@ -115,3 +115,9 @@ jobs:
           else
             echo "No functions configured. Skipping functions deploy."
           fi
+
+      - name: Deploy Hosting (watch-live page) to dev
+        run: |
+          # /j/<token> links sent to her circle are served from Hosting, and
+          # /api/live is rewritten to the liveJourney function deployed above.
+          firebase deploy --only hosting --project "$FIREBASE_PROJECT_ID_DEV" --non-interactive

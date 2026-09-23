@@ -4,7 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<meta name="referrer" content="no-referrer">
+<!-- OpenStreetMap blocks tile requests without a Referer. strict-origin-when-cross-origin
+     sends only "https://<site>/" to other sites, so the /j/<token> path never leaks. -->
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="theme-color" content="#7C4DEB">
 <title>Amica · Live journey</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -250,7 +252,7 @@
     if (map || !window.L) return;
     map = L.map("map", { zoomControl: false, attributionControl: true });
     L.control.zoom({ position: "topright" }).addTo(map);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
     }).addTo(map);

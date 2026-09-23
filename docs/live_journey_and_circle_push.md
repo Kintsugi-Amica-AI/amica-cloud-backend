@@ -91,7 +91,12 @@ firebase deploy --only functions,firestore:rules,hosting
 - Push needs the **Firebase Cloud Messaging API (V1)** enabled on the Google
   Cloud project (it is on by default for new Firebase projects).
 - The live page uses OpenStreetMap tiles through Leaflet, so it needs no
-  Maps API key.
+  Maps API key. OpenStreetMap refuses tile requests that carry no `Referer`,
+  so the page (and `firebase.json`) use
+  `Referrer-Policy: strict-origin-when-cross-origin`: other sites only ever
+  see the site origin, never the `/j/{token}` path.
+- The dev deploy workflow deploys Hosting as well. Without it `/j/{token}`
+  links have no page behind them ("Site Not Found").
 
 ## Tests
 

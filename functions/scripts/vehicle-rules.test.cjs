@@ -10,7 +10,7 @@ before(async () => {
     firestore: { rules: readFileSync('../firestore.rules', 'utf8') },
   });
   await env.withSecurityRulesDisabled(async (context) => {
-    for (const id of ['completed', 'active', 'wrong-plate', 'bad-stars', 'future']) {
+    for (const id of ['completed', 'commented', 'bad-comment', 'active', 'wrong-plate', 'bad-stars', 'future']) {
       await setDoc(doc(context.firestore(), 'journeys', id), {
         userId: 'alice', status: id === 'active' ? 'active' : 'safe',
         metadata: { vehiclePlate: 'CBR6797' },
@@ -38,6 +38,13 @@ test('reject another user, incomplete journey, wrong plate, or invalid stars', a
   await assert.rejects(setDoc(doc(alice, 'vehicle_reviews', 'wrong-plate'), review({ vehiclePlate: 'CBO3286' })), { code: 'permission-denied' });
   for (const stars of [0, 6, 2.5]) {
     await assert.rejects(setDoc(doc(alice, 'vehicle_reviews', 'bad-stars'), review({ stars })), { code: 'permission-denied' });
+  }
+});
+test('a review may carry an optional comment (app caps it at 500, rules at 1000 for multi-code-point scripts)', async () => {
+  const alice = env.authenticatedContext('alice').firestore();
+  await assert.doesNotReject(setDoc(doc(alice, 'vehicle_reviews', 'commented'), review({ comment: 'Polite driver, clean car.' })));
+  for (const comment of ['', 'x'.repeat(1001), 42]) {
+    await assert.rejects(setDoc(doc(alice, 'vehicle_reviews', 'bad-comment'), review({ comment })), { code: 'permission-denied' });
   }
 });
 test('aggregate and journey plate cannot be changed by clients', async () => {
