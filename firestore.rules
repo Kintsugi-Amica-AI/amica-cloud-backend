@@ -19,8 +19,9 @@ service cloud.firestore {
     }
 
     function updatesOnlySosStatus() {
+      // The app also records who its SOS text reached.
       return request.resource.data.diff(resource.data).affectedKeys()
-        .hasOnly(["status", "updatedAt"]);
+        .hasOnly(["status", "updatedAt", "notifiedContacts", "deliveryReport"]);
     }
 
     // A profile may only claim `phoneVerified: true` for the number that is
