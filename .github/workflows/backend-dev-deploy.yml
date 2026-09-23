@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [dev, main]
 
+# One deploy at a time: overlapping runs make Cloud Functions answer
+# "409 unable to queue the operation" for functions both runs update.
+concurrency:
+  group: backend-dev-deploy-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   validate:
     runs-on: ubuntu-latest
