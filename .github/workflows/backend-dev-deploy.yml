@@ -104,9 +104,17 @@ jobs:
             echo "No functions/package.json found. Skipping functions build."
           fi
 
-      - name: Deploy Firestore and Storage rules and indexes to dev
+      - name: Deploy Firestore rules and indexes to dev
         run: |
-          firebase deploy --only firestore:rules,firestore:indexes,storage --project "$FIREBASE_PROJECT_ID_DEV" --non-interactive
+          firebase deploy --only firestore:rules,firestore:indexes --project "$FIREBASE_PROJECT_ID_DEV" --non-interactive
+
+      # Separate step so a Storage problem never blocks the Firestore rules.
+      # Needs the default bucket to exist (Console > Storage > Get started) and
+      # the CI service account to have "Firebase Storage Admin"
+      # (roles/firebasestorage.admin); see docs/scan_vehicle_setup.md.
+      - name: Deploy Storage rules to dev
+        run: |
+          firebase deploy --only storage --project "$FIREBASE_PROJECT_ID_DEV" --non-interactive
 
       - name: Deploy functions to dev if configured
         run: |

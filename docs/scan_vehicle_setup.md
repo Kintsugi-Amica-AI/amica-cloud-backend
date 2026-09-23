@@ -83,5 +83,17 @@ result screen.
   console. The next first scan saves a new one.
 
 Deploy: `firebase deploy --only storage,functions:onVehicleImageUploaded`.
-Cloud Storage must be enabled for the project (default bucket
-`amica-cloud-backend.firebasestorage.app`).
+
+One-time setup (a CI deploy fails with
+`Permission 'firebasestorage.defaultBucket.get' denied` until both are done):
+
+1. Create the default bucket: Firebase console → Build → Storage → Get started
+   (needs the Blaze plan, which Cloud Functions already require). It should be
+   `amica-cloud-backend.firebasestorage.app`.
+2. Give the CI service account (the one in `FIREBASE_SERVICE_ACCOUNT_DEV`)
+   the **Firebase Storage Admin** role (`roles/firebasestorage.admin`) in
+   Google Cloud console → IAM. The Storage trigger also needs Eventarc: the
+   first `functions` deploy that includes `onVehicleImageUploaded` grants the
+   Cloud Storage service agent `roles/pubsub.publisher`, so either run that
+   first deploy from an Owner account or give the CI account
+   **Project IAM Admin** for it.
