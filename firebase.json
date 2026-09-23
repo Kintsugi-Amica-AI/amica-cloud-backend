@@ -12,5 +12,61 @@
         "npm --prefix functions run build"
       ]
     }
-  ]
+  ],
+  "hosting": {
+    "public": "hosting",
+    "ignore": [
+      "firebase.json",
+      "**/.*"
+    ],
+    "cleanUrls": true,
+    "rewrites": [
+      {
+        "source": "/api/live",
+        "function": {
+          "functionId": "liveJourney",
+          "region": "us-central1"
+        }
+      },
+      {
+        "source": "/api/live/**",
+        "function": {
+          "functionId": "liveJourney",
+          "region": "us-central1"
+        }
+      },
+      {
+        "source": "/j/**",
+        "destination": "/live.html"
+      }
+    ],
+    "headers": [
+      {
+        "source": "**",
+        "headers": [
+          {
+            "key": "X-Robots-Tag",
+            "value": "noindex, nofollow"
+          },
+          {
+            "key": "Referrer-Policy",
+            "value": "no-referrer"
+          },
+          {
+            "key": "X-Content-Type-Options",
+            "value": "nosniff"
+          }
+        ]
+      },
+      {
+        "source": "**/*.html",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
+      }
+    ]
+  }
 }

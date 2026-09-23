@@ -22,6 +22,13 @@ export interface SosAlertModel {
   location?: GeoPointLike;
   message?: string;
   notifiedContacts: string[];
+  /** Server: which linked contacts the SOS push reached. */
+  push?: { sentAt: unknown; reachedContactIds: string[] };
+  /** Server: one-tap replies from linked contacts, keyed by their uid. */
+  guardianResponses?: Record<
+    string,
+    { contactId: string; name: string; response: "calling" | "alerted_others"; at: string }
+  >;
   evidence: SosAlertEvidence;
   metadata: Record<string, unknown>;
   schemaVersion: number;

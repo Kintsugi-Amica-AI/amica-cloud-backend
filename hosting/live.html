@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#7C4DEB">
+<title>Amica · Live journey</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+  :root {
+    --ground: #FAF7FF; --card: #FFFFFF; --shell: #F2EEFA;
+    --ink: #2B1B3A; --ink70: #5E4C6E; --ink45: #665577; --line: #E9E2F3;
+    --accent: #7C4DEB; --accent-end: #B84A9C; --accent-ink: #6D3FC9; --accent-soft: #F0E9FF;
+    --danger: #D93360; --danger-ink: #A82246; --danger-soft: #FDE4EC;
+    --ok: #2F6A4D; --ok-soft: #E2F3E9; --warn: #7A4F0C; --warn-soft: #FFF0DD;
+    --shadow: 0 10px 30px rgba(43, 27, 58, .12);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #0E0A17; --card: #1E1730; --shell: #1A1426;
+      --ink: #F5EEF8; --ink70: #C7B8D2; --ink45: #A898B8; --line: #2E2540;
+      --accent-ink: #C3AEFF; --accent-soft: #2F2358;
+      --danger-ink: #FF8FA8; --danger-soft: #4A1830;
+      --ok: #7CC39B; --ok-soft: #173527; --warn: #E6B566; --warn-soft: #3A2A14;
+      --shadow: 0 10px 30px rgba(0, 0, 0, .45);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--ground); color: var(--ink);
+    font: 15px/1.45 "Public Sans", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  h1, h2, .brand { font-family: "Bricolage Grotesque", system-ui, sans-serif; letter-spacing: -.01em; }
+  #map { position: fixed; inset: 0; z-index: 0; background: var(--shell); }
+  .top { position: fixed; top: 0; left: 0; right: 0; z-index: 10; display: flex; align-items: center;
+    justify-content: space-between; gap: 12px;
+    padding: calc(env(safe-area-inset-top) + 12px) 16px 12px; pointer-events: none; }
+  .brand { pointer-events: auto; display: inline-flex; align-items: center; gap: 8px; font-weight: 700;
+    font-size: 17px; background: var(--card); border-radius: 999px; padding: 7px 14px 7px 8px; box-shadow: var(--shadow); }
+  .brand i { width: 22px; height: 22px; border-radius: 50%; display: inline-block;
+    background: linear-gradient(135deg, var(--accent), var(--accent-end)); }
+  .pill { pointer-events: auto; display: inline-flex; align-items: center; gap: 7px; font-weight: 600; font-size: 13px;
+    background: var(--card); border-radius: 999px; padding: 8px 13px; box-shadow: var(--shadow); }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--ok); }
+  .pill.live .dot { animation: pulse 1.6s ease-out infinite; }
+  .pill.sos { background: var(--danger); color: #fff; } .pill.sos .dot { background: #fff; animation: pulse 1s ease-out infinite; }
+  .pill.stale .dot { background: var(--warn); }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(47,106,77,.55); } 100% { box-shadow: 0 0 0 10px rgba(47,106,77,0); } }
+  .sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; padding: 0 12px calc(env(safe-area-inset-bottom) + 12px); }
+  .card { max-width: 560px; margin: 0 auto; background: var(--card); border-radius: 22px; padding: 18px 18px 16px; box-shadow: var(--shadow); }
+  .card h1 { font-size: 22px; margin: 0 0 2px; line-height: 1.2; }
+  .muted { color: var(--ink70); } .small { font-size: 13px; }
+  .row { display: flex; gap: 10px; margin-top: 14px; }
+  .facts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+  .fact { background: var(--shell); border-radius: 14px; padding: 10px 12px; min-width: 0; }
+  .fact b { display: block; font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fact span { font-size: 12px; color: var(--ink45); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
+  .btn { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; border-radius: 14px;
+    font: 600 15px "Public Sans", sans-serif; text-decoration: none; border: 1.5px solid var(--line); color: var(--ink); background: var(--card); }
+  .btn.primary { border: 0; color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-end)); }
+  .btn.danger { border: 0; color: #fff; background: var(--danger); }
+  .banner { border-radius: 14px; padding: 11px 13px; margin-top: 12px; font-weight: 500; font-size: 14px; }
+  .banner.sos { background: var(--danger-soft); color: var(--danger-ink); }
+  .banner.stale { background: var(--warn-soft); color: var(--warn); }
+  .center { position: fixed; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center;
+    padding: 24px; background: var(--ground); text-align: center; }
+  .center .card { box-shadow: none; background: transparent; }
+  .badge { width: 64px; height: 64px; border-radius: 50%; margin: 0 auto 14px; display: flex; align-items: center; justify-content: center;
+    font-size: 30px; background: var(--accent-soft); color: var(--accent-ink); }
+  .badge.ok { background: var(--ok-soft); color: var(--ok); }
+  .hidden { display: none !important; }
+  .me { width: 20px; height: 20px; border-radius: 50%; background: var(--accent); border: 3px solid #fff;
+    box-shadow: 0 0 0 0 rgba(124,77,235,.5); animation: me 2s ease-out infinite; }
+  .me.sos { background: var(--danger); }
+  @keyframes me { 0% { box-shadow: 0 0 0 0 rgba(124,77,235,.45); } 100% { box-shadow: 0 0 0 18px rgba(124,77,235,0); } }
+  .flag { width: 16px; height: 16px; border-radius: 4px; transform: rotate(45deg); background: var(--ink); border: 3px solid #fff; }
+  .leaflet-control-attribution { font-size: 10px; }
+  .leaflet-bar a, .leaflet-bar a:hover { background: var(--card); color: var(--ink); border-bottom-color: var(--line); }
+  .leaflet-bar { border: 1px solid var(--line) !important; box-shadow: var(--shadow) !important; }
+  .leaflet-top { top: calc(env(safe-area-inset-top) + 64px); }
+</style>
+</head>
+<body>
+<div id="map" aria-label="Map"></div>
+
+<div class="top">
+  <span class="brand"><i></i>Amica</span>
+  <span id="pill" class="pill hidden"><span class="dot"></span><span id="pillText"></span></span>
+</div>
+
+<div class="sheet hidden" id="sheet">
+  <div class="card">
+    <div class="muted small" id="kicker"></div>
+    <h1 id="title"></h1>
+    <div id="sosBanner" class="banner sos hidden"></div>
+    <div id="staleBanner" class="banner stale hidden"></div>
+    <div class="facts">
+      <div class="fact"><span data-t="expected"></span><b id="eta">—</b></div>
+      <div class="fact"><span data-t="lastUpdate"></span><b id="updated">—</b></div>
+    </div>
+    <div class="row">
+      <a id="mapsBtn" class="btn primary" target="_blank" rel="noopener" data-t="openMaps"></a>
+      <a id="callBtn" class="btn danger hidden" href="tel:119" data-t="call119"></a>
+    </div>
+    <p class="muted small" style="margin:12px 2px 0" data-t="footer"></p>
+  </div>
+</div>
+
+<div class="center" id="state">
+  <div class="card">
+    <div class="badge" id="stateBadge">•</div>
+    <h2 id="stateTitle" data-t="loading" style="margin:0 0 6px"></h2>
+    <p class="muted" id="stateBody"></p>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  var STRINGS = {
+    en: {
+      loading: "Loading journey…",
+      live: "Live", sos: "SOS", stale: "Signal lost", ended: "Ended",
+      kicker: "Live journey",
+      heading: "{name} is on the way to {dest}",
+      headingNoDest: "{name} is on a journey",
+      sosBanner: "{name} raised an SOS. Try calling her now. If you can't reach her, call 119.",
+      staleBanner: "Last update {ago}. Her phone may have lost signal, so this is her last known position.",
+      expected: "Expected by", lastUpdate: "Last update",
+      openMaps: "Open in Google Maps", call119: "Call 119",
+      footer: "This page updates on its own. Only people with this link can see it, and it stops showing her location when the journey ends.",
+      arrivedTitle: "{name} arrived safely",
+      arrivedBody: "Her journey to {dest} ended {when}. Her location is no longer shared.",
+      endedTitle: "This journey has ended",
+      endedBody: "{name} ended the journey {when}. Her location is no longer shared.",
+      expiredTitle: "This link has expired",
+      expiredBody: "Live journey links stop working 12 hours after the journey.",
+      notFoundTitle: "Link not found",
+      notFoundBody: "Check that the whole link from the message was opened.",
+      offlineTitle: "Can't reach Amica",
+      offlineBody: "Check your internet connection. Retrying…",
+      justNow: "just now", secAgo: "{n}s ago", minAgo: "{n} min ago", hrAgo: "{n} h ago",
+      someone: "Your contact", her: "She", you: "Her position", dest: "Destination"
+    },
+    si: {
+      loading: "ගමන පූරණය වෙමින්…",
+      live: "සජීවී", sos: "SOS", stale: "සංඥා නැත", ended: "අවසන්",
+      kicker: "සජීවී ගමන",
+      heading: "{name} {dest} වෙත යමින් සිටී",
+      headingNoDest: "{name} ගමනක යෙදී සිටී",
+      sosBanner: "{name} SOS එකක් යැව්වා. දැන්ම ඇයට කතා කරන්න. සම්බන්ධ කරගත නොහැකි නම් 119 අමතන්න.",
+      staleBanner: "අවසන් යාවත්කාලීනය {ago}. ඇගේ දුරකථනයට සංඥා නැති වී ඇති විය හැක, එබැවින් මෙය ඇගේ අවසන් ස්ථානයයි.",
+      expected: "බලාපොරොත්තු වේලාව", lastUpdate: "අවසන් යාවත්කාලීනය",
+      openMaps: "Google Maps හි විවෘත කරන්න", call119: "119 අමතන්න",
+      footer: "මෙම පිටුව ස්වයංක්‍රීයව යාවත්කාලීන වේ. මෙම සබැඳිය ඇති අයට පමණක් එය පෙනේ. ගමන අවසන් වූ විට ඇගේ ස්ථානය පෙන්වීම නවතී.",
+      arrivedTitle: "{name} ආරක්ෂිතව ළඟා විය",
+      arrivedBody: "{dest} වෙත ගමන {when} අවසන් විය. ඇගේ ස්ථානය තවදුරටත් බෙදා නොගනී.",
+      endedTitle: "මෙම ගමන අවසන් වී ඇත",
+      endedBody: "{name} {when} ගමන අවසන් කළා. ඇගේ ස්ථානය තවදුරටත් බෙදා නොගනී.",
+      expiredTitle: "මෙම සබැඳිය කල් ඉකුත් වී ඇත",
+      expiredBody: "සජීවී ගමන් සබැඳි ගමනෙන් පැය 12කට පසු ක්‍රියා නොකරයි.",
+      notFoundTitle: "සබැඳිය හමු නොවීය",
+      notFoundBody: "පණිවිඩයේ ඇති සම්පූර්ණ සබැඳිය විවෘත කළ බව පරීක්ෂා කරන්න.",
+      offlineTitle: "Amica වෙත සම්බන්ධ විය නොහැක",
+      offlineBody: "ඔබගේ අන්තර්ජාල සම්බන්ධතාවය පරීක්ෂා කරන්න. නැවත උත්සාහ කරමින්…",
+      justNow: "දැන්", secAgo: "තත්පර {n}කට පෙර", minAgo: "මිනිත්තු {n}කට පෙර", hrAgo: "පැය {n}කට පෙර",
+      someone: "ඔබගේ සම්බන්ධතාවය", her: "ඇය", you: "ඇගේ ස්ථානය", dest: "ගමනාන්තය"
+    },
+    ta: {
+      loading: "பயணம் ஏற்றப்படுகிறது…",
+      live: "நேரலை", sos: "SOS", stale: "சிக்னல் இல்லை", ended: "முடிந்தது",
+      kicker: "நேரலை பயணம்",
+      heading: "{name} {dest} நோக்கிச் செல்கிறார்",
+      headingNoDest: "{name} பயணத்தில் இருக்கிறார்",
+      sosBanner: "{name} SOS அனுப்பியுள்ளார். இப்போதே அவரை அழையுங்கள். தொடர்பு கொள்ள முடியாவிட்டால் 119 ஐ அழையுங்கள்.",
+      staleBanner: "கடைசி புதுப்பிப்பு {ago}. அவரது தொலைபேசிக்கு சிக்னல் இல்லாமல் இருக்கலாம், எனவே இது அவரது கடைசி இருப்பிடம்.",
+      expected: "எதிர்பார்க்கும் நேரம்", lastUpdate: "கடைசி புதுப்பிப்பு",
+      openMaps: "Google Maps இல் திற", call119: "119 ஐ அழை",
+      footer: "இந்தப் பக்கம் தானாகப் புதுப்பிக்கப்படும். இந்த இணைப்பு உள்ளவர்கள் மட்டுமே இதைப் பார்க்க முடியும். பயணம் முடிந்ததும் அவரது இருப்பிடம் காட்டப்படாது.",
+      arrivedTitle: "{name} பாதுகாப்பாக சென்றடைந்தார்",
+      arrivedBody: "{dest} நோக்கிய பயணம் {when} முடிந்தது. அவரது இருப்பிடம் இனி பகிரப்படாது.",
+      endedTitle: "இந்தப் பயணம் முடிந்தது",
+      endedBody: "{name} {when} பயணத்தை முடித்தார். அவரது இருப்பிடம் இனி பகிரப்படாது.",
+      expiredTitle: "இந்த இணைப்பு காலாவதியானது",
+      expiredBody: "நேரலை பயண இணைப்புகள் பயணத்திற்கு 12 மணி நேரத்திற்குப் பிறகு செயல்படாது.",
+      notFoundTitle: "இணைப்பு கிடைக்கவில்லை",
+      notFoundBody: "செய்தியில் உள்ள முழு இணைப்பும் திறக்கப்பட்டதா எனச் சரிபார்க்கவும்.",
+      offlineTitle: "Amica ஐ அணுக முடியவில்லை",
+      offlineBody: "உங்கள் இணைய இணைப்பைச் சரிபார்க்கவும். மீண்டும் முயற்சிக்கிறது…",
+      justNow: "இப்போது", secAgo: "{n} வினாடிகளுக்கு முன்", minAgo: "{n} நிமிடங்களுக்கு முன்", hrAgo: "{n} மணி நேரத்திற்கு முன்",
+      someone: "உங்கள் தொடர்பு", her: "அவர்", you: "அவரது இருப்பிடம்", dest: "சேருமிடம்"
+    }
+  };
+
+  var lang = (navigator.languages || [navigator.language || "en"])
+    .map(function (l) { return String(l).slice(0, 2).toLowerCase(); })
+    .filter(function (l) { return STRINGS[l]; })[0] || "en";
+  var T = STRINGS[lang];
+  document.documentElement.lang = lang;
+
+  function t(key, vars) {
+    return String(T[key] || STRINGS.en[key] || key).replace(/\{(\w+)\}/g, function (_, k) {
+      return vars && vars[k] != null ? vars[k] : "";
+    });
+  }
+  function $(id) { return document.getElementById(id); }
+  function show(el, on) { el.classList.toggle("hidden", !on); }
+  document.querySelectorAll("[data-t]").forEach(function (el) { el.textContent = t(el.getAttribute("data-t")); });
+
+  var token = (location.pathname.split("/").filter(Boolean).pop() || "").trim();
+  var STALE_MS = 2 * 60 * 1000;
+  var map = null, meMarker = null, destMarker = null, routeLine = null, framed = false;
+  var last = null, failures = 0, timer = null, clockSkew = 0;
+
+  function ago(iso) {
+    if (!iso) return "—";
+    var s = Math.max(0, Math.round((Date.now() + clockSkew - Date.parse(iso)) / 1000));
+    if (s < 10) return t("justNow");
+    if (s < 60) return t("secAgo", { n: s });
+    if (s < 3600) return t("minAgo", { n: Math.round(s / 60) });
+    return t("hrAgo", { n: Math.round(s / 3600) });
+  }
+  function clock(iso) {
+    if (!iso) return "—";
+    try { return new Date(iso).toLocaleTimeString(lang, { hour: "numeric", minute: "2-digit" }); }
+    catch (e) { return new Date(iso).toLocaleTimeString(); }
+  }
+
+  // Google encoded polyline → [[lat, lng], …]
+  function decode(str) {
+    var points = [], index = 0, lat = 0, lng = 0;
+    while (index < str.length) {
+      var b, shift = 0, result = 0;
+      do { b = str.charCodeAt(index++) - 63; result |= (b & 31) << shift; shift += 5; } while (b >= 32);
+      lat += (result & 1) ? ~(result >> 1) : (result >> 1);
+      shift = 0; result = 0;
+      do { b = str.charCodeAt(index++) - 63; result |= (b & 31) << shift; shift += 5; } while (b >= 32);
+      lng += (result & 1) ? ~(result >> 1) : (result >> 1);
+      points.push([lat / 1e5, lng / 1e5]);
+    }
+    return points;
+  }
+
+  function ensureMap() {
+    if (map || !window.L) return;
+    map = L.map("map", { zoomControl: false, attributionControl: true });
+    L.control.zoom({ position: "topright" }).addTo(map);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(map);
+  }
+
+  function stateScreen(badge, title, body, ok) {
+    show($("state"), true); show($("sheet"), false); show($("pill"), false);
+    $("stateBadge").textContent = badge;
+    $("stateBadge").classList.toggle("ok", !!ok);
+    $("stateTitle").textContent = title;
+    $("stateBody").textContent = body || "";
+  }
+
+  function render(d) {
+    var name = d.ownerName || t("someone");
+    if (d.status === "ended") {
+      var arrived = d.endReason === "safe";
+      stateScreen(arrived ? "✓" : "•",
+        t(arrived ? "arrivedTitle" : "endedTitle", { name: name }),
+        t(arrived && d.destinationName ? "arrivedBody" : "endedBody",
+          { name: name, dest: d.destinationName, when: ago(d.endedAt) }),
+        arrived);
+      stop();
+      return;
+    }
+
+    show($("state"), false); show($("sheet"), true); show($("pill"), true);
+    var sos = d.status === "sos";
+    var updatedAt = d.location && d.location.updatedAt;
+    var stale = !sos && updatedAt && (Date.now() + clockSkew - Date.parse(updatedAt)) > STALE_MS;
+
+    var pill = $("pill");
+    pill.className = "pill " + (sos ? "sos" : stale ? "stale" : "live");
+    $("pillText").textContent = sos ? t("sos") : stale ? t("stale") : t("live");
+
+    $("kicker").textContent = t("kicker");
+    $("title").textContent = d.destinationName
+      ? t("heading", { name: name, dest: d.destinationName })
+      : t("headingNoDest", { name: name });
+    show($("sosBanner"), sos);
+    $("sosBanner").textContent = t("sosBanner", { name: name });
+    show($("callBtn"), sos);
+    show($("staleBanner"), !!stale);
+    $("staleBanner").textContent = t("staleBanner", { ago: ago(updatedAt) });
+    $("eta").textContent = clock(d.estimatedEndTime);
+    $("updated").textContent = ago(updatedAt);
+
+    var loc = d.location;
+    var mapsBtn = $("mapsBtn");
+    if (loc) {
+      mapsBtn.href = "https://www.google.com/maps/search/?api=1&query=" + loc.latitude + "," + loc.longitude;
+      show(mapsBtn, true);
+    } else {
+      show(mapsBtn, false);
+    }
+
+    ensureMap();
+    if (!map) return;
+    if (d.routePolyline && !routeLine) {
+      try {
+        routeLine = L.polyline(decode(d.routePolyline), { color: "#7C4DEB", weight: 5, opacity: .75 }).addTo(map);
+      } catch (e) { /* a bad polyline only costs the route line */ }
+    }
+    if (d.destination && !destMarker) {
+      destMarker = L.marker([d.destination.latitude, d.destination.longitude], {
+        icon: L.divIcon({ className: "", html: '<div class="flag"></div>', iconSize: [16, 16], iconAnchor: [8, 8] }),
+        title: t("dest"), keyboard: false
+      }).addTo(map);
+    }
+    if (loc) {
+      var ll = [loc.latitude, loc.longitude];
+      var icon = L.divIcon({ className: "", html: '<div class="me' + (sos ? " sos" : "") + '"></div>', iconSize: [20, 20], iconAnchor: [10, 10] });
+      if (!meMarker) {
+        meMarker = L.marker(ll, { icon: icon, title: t("you"), keyboard: false, zIndexOffset: 1000 }).addTo(map);
+      } else {
+        meMarker.setLatLng(ll); meMarker.setIcon(icon);
+      }
+    }
+    if (!framed && (loc || d.destination)) {
+      framed = true;
+      var pts = [];
+      if (loc) pts.push([loc.latitude, loc.longitude]);
+      if (d.destination) pts.push([d.destination.latitude, d.destination.longitude]);
+      var sheetH = $("sheet").offsetHeight || 260;
+      if (pts.length === 1) map.setView(pts[0], 16);
+      else map.fitBounds(pts, { paddingTopLeft: [40, 90], paddingBottomRight: [40, sheetH + 30], maxZoom: 16 });
+    } else if (loc && map.getBounds && !map.getBounds().pad(-0.15).contains([loc.latitude, loc.longitude])) {
+      map.panTo([loc.latitude, loc.longitude]);
+    }
+  }
+
+  function stop() { if (timer) { clearTimeout(timer); timer = null; } }
+  function schedule() {
+    stop();
+    var base = document.hidden ? 30000 : (last && last.status === "sos" ? 4000 : 6000);
+    timer = setTimeout(poll, Math.min(base * Math.pow(2, Math.min(failures, 3)), 60000));
+  }
+
+  function poll() {
+    if (!/^[A-Za-z0-9_-]{20,64}$/.test(token)) {
+      stateScreen("?", t("notFoundTitle"), t("notFoundBody"));
+      return;
+    }
+    fetch("/api/live?token=" + encodeURIComponent(token), { cache: "no-store" })
+      .then(function (res) {
+        if (res.status === 404) { stateScreen("?", t("notFoundTitle"), t("notFoundBody")); stop(); return null; }
+        if (res.status === 410) { stateScreen("⌛", t("expiredTitle"), t("expiredBody")); stop(); return null; }
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return res.json();
+      })
+      .then(function (d) {
+        if (!d) return;
+        failures = 0;
+        if (d.serverTime) clockSkew = Date.parse(d.serverTime) - Date.now();
+        last = d;
+        render(d);
+        if (d.status !== "ended") schedule();
+      })
+      .catch(function () {
+        failures++;
+        if (!last) stateScreen("…", t("offlineTitle"), t("offlineBody"));
+        schedule();
+      });
+  }
+
+  // Keep "12s ago" honest between polls.
+  setInterval(function () { if (last && last.status !== "ended") render(last); }, 5000);
+  document.addEventListener("visibilitychange", function () { if (!document.hidden && last && last.status !== "ended") poll(); });
+  poll();
+})();
+</script>
+</body>
+</html>

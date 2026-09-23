@@ -5,6 +5,9 @@
 3. Enable Cloud Firestore.
 4. Deploy rules and indexes from this repository.
 5. Deploy Cloud Functions from the `functions/` directory.
+6. Deploy Hosting (the watch-live page in `hosting/`):
+   `firebase deploy --only hosting`. See
+   [live_journey_and_circle_push.md](live_journey_and_circle_push.md).
 
 Do not commit service account files, `.firebaserc`, generated app config files, or production environment values.
 

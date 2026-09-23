@@ -56,6 +56,14 @@ export interface JourneyRouteSnapshot {
   summary?: string;
 }
 
+export interface JourneyLiveShare {
+  token: string;
+  url: string;
+  createdAt: string;
+  /** When linked guardians were last pushed the link. */
+  pushedAt?: string;
+}
+
 export const DEFAULT_STOP_ALERT_DISTANCE_METERS = 2000;
 
 export interface JourneyModel {
@@ -73,6 +81,8 @@ export interface JourneyModel {
   stopAlert?: JourneyStopAlert;
   pause?: JourneyPause | null;
   route?: JourneyRouteSnapshot | null;
+  /** Watch-live link, written only by `startJourneyShare`. */
+  liveShare?: JourneyLiveShare;
   metadata: Record<string, unknown>;
   schemaVersion: number;
   createdAt: string;

@@ -21,6 +21,13 @@ The schema is designed so future safety features can be added without breaking t
 | `vehicles` | Stores sample vehicle safety records for Scan Before You Ride. |
 | `vehicle_reviews` | One private passenger review per completed vehicle journey. |
 | `vehicle_safety_events` | One unverified unanswered-check event per vehicle journey. |
+| `live_shares` | Server-only. One per shared journey; backs the public watch-live page. |
+| `guardian_invites` | Server-only. Single-use codes that link a contact's Amica account. |
+| `fcm_tokens` | One per device push token, owned by the signed-in user. |
+
+See [Live journey links and circle push alerts](live_journey_and_circle_push.md)
+for how `journeys.liveShare`, `emergency_contacts.guardianUid`,
+`sos_alerts.push` and `sos_alerts.guardianResponses` are used.
 
 Vehicle journeys store the confirmed canonical registration in the immutable
 `metadata.vehiclePlate` field. Vehicles may now contain `ratingTotal`, `ratingCount`,
@@ -468,6 +475,42 @@ Future extension notes:
 
 - OCR confidence and check history can be added later.
 - Verified reports should eventually come from trusted backend/admin processes.
+
+## live_shares
+
+Server-only (clients have no access). Document ID is the share token.
+
+- `token`, `userId`, `journeyId`: string
+- `ownerName`: her first name only
+- `status`: `active | sos | ended`
+- `journeyType`, `destinationName`: string
+- `destination`, `location`: `{ latitude, longitude, updatedAt }` or null
+- `estimatedEndTime`, `endedAt`, `expiresAt`, `createdAt`, `updatedAt`: ISO strings
+- `endReason`: journey status that ended it (`safe`, `cancelled`, …) or null
+- `routePolyline`: Google encoded polyline or null
+
+Related fields written only by the backend:
+
+- `journeys.liveShare`: `{ token, url, createdAt, pushedAt? }`
+- `emergency_contacts.guardianUid`, `guardianName`, `guardianLinkedAt`
+- `sos_alerts.push`: `{ sentAt, reachedContactIds[] }`
+- `sos_alerts.guardianResponses.{uid}`: `{ contactId, name, response, at }`,
+  where `response` is `calling | alerted_others`
+
+## guardian_invites
+
+Server-only. Document ID is the 6-character code.
+
+- `code`, `userId` (who invited), `contactId`, `contactName`, `ownerName`
+- `createdAt`, `expiresAt` (7 days), `usedAt`, `usedBy`
+
+## fcm_tokens
+
+Document ID is the FCM registration token.
+
+- `userId`: owner uid (rules: must be the signed-in user)
+- `platform`: `android | iOS | …`
+- `updatedAt`: server timestamp
 
 ## Schema Change Notes
 

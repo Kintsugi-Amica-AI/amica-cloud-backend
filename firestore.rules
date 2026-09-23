@@ -52,10 +52,24 @@ service cloud.firestore {
 
     // Emergency contacts are private to the authenticated user who owns them.
     // Mobile queries this collection with where("userId", "==", request.auth.uid).
+    // `guardianUid` links a contact to their own Amica account so alerts reach
+    // them as push notifications. Only the server sets it (after the contact
+    // enters an invite code texted to their number); the owner may remove it,
+    // for example when the contact's phone number changes.
+    function guardianLinkUntouchedOrRemoved() {
+      return !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['guardianUid', 'guardianName', 'guardianLinkedAt'])
+        || !request.resource.data.keys()
+          .hasAny(['guardianUid', 'guardianName', 'guardianLinkedAt']);
+    }
+
     match /emergency_contacts/{contactId} {
       // Create/update must keep request.resource.data.userId equal to the current user.
-      allow create: if ownsIncomingDocument();
-      allow update: if ownsExistingDocument() && ownsIncomingDocument();
+      allow create: if ownsIncomingDocument()
+        && !request.resource.data.keys()
+          .hasAny(['guardianUid', 'guardianName', 'guardianLinkedAt']);
+      allow update: if ownsExistingDocument() && ownsIncomingDocument()
+        && guardianLinkUntouchedOrRemoved();
 
       // Read/delete must only target documents already owned by the current user.
       allow read, delete: if ownsExistingDocument();
@@ -66,9 +80,12 @@ service cloud.firestore {
     match /journeys/{journeyId} {
       // Create/update must keep userId equal to the current user's Firebase Auth UID.
       allow create: if ownsIncomingDocument();
+      // `liveShare` (the watch-live link) is written only by the server.
       allow update: if ownsExistingDocument() && ownsIncomingDocument()
         && request.resource.data.get('metadata', {}).get('vehiclePlate', '')
-          == resource.data.get('metadata', {}).get('vehiclePlate', '');
+          == resource.data.get('metadata', {}).get('vehiclePlate', '')
+        && request.resource.data.get('liveShare', null)
+          == resource.data.get('liveShare', null);
 
       // Read/delete only allow documents already owned by the current user.
       // A read of a journey that does not exist yet is also allowed: it reveals
@@ -84,7 +101,10 @@ service cloud.firestore {
     // Mobile queries this collection with where("userId", "==", request.auth.uid).
     match /sos_alerts/{alertId} {
       allow create: if ownsIncomingDocument();
-      allow read: if ownsExistingDocument();
+      // As for journeys: the SOS screen listens to a new alert (for guardian
+      // replies) before the server has it, so a missing document is readable.
+      allow read: if isSignedIn()
+        && (resource == null || resource.data.userId == request.auth.uid);
 
       // MVP only allows the owner to update status fields, for example resolved/cancelled.
       allow update: if ownsExistingDocument()
@@ -134,6 +154,18 @@ service cloud.firestore {
         && request.time >= get(/databases/$(database)/documents/journeys/$(journeyId)).data.estimatedEndTime + duration.value(180, 's');
       allow update, delete: if false;
     }
+
+    // Push notification tokens, one document per device token. A token that
+    // moves to another account (sign-out, sign-in) is simply re-claimed.
+    match /fcm_tokens/{token} {
+      allow read, delete: if ownsExistingDocument();
+      allow create, update: if ownsIncomingDocument()
+        && request.resource.data.keys().hasOnly(['userId', 'platform', 'updatedAt'])
+        && request.resource.data.updatedAt == request.time;
+    }
+
+    // live_shares (watch-live pages) and guardian_invites are server-only:
+    // the page reads a trimmed view through the liveJourney function.
 
     match /{document=**} {
       allow read, write: if false;
