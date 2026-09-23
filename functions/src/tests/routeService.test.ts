@@ -3,6 +3,8 @@ import {
   MIN_ROUTE_FACTOR,
   buildRouteEstimate,
   clampRouteFactor,
+  parseDirectionsRoute,
+  readJourneyRouteMode,
 } from "../services/routeService";
 import { distanceInMeters } from "../utils/locationUtils";
 
@@ -51,4 +53,43 @@ export function routeServiceSmokeTest(): boolean {
     clampsHigh &&
     handlesSamePoint
   );
+}
+
+export function journeyRouteSmokeTest(): boolean {
+  const body = {
+    status: "OK",
+    routes: [
+      {
+        summary: "Galle Rd",
+        overview_polyline: { points: "_p~iF~ps|U_ulLnnqC_mqNvxq`@" },
+        legs: [
+          { distance: { value: 1200 }, duration: { value: 900 } },
+          { distance: { value: 300 }, duration: { value: 240 } },
+        ],
+      },
+    ],
+  };
+  const route = parseDirectionsRoute(body, "walking");
+  const parsesRoute =
+    route !== null &&
+    route.distanceMeters === 1500 &&
+    route.durationSeconds === 1140 &&
+    route.summary === "Galle Rd" &&
+    route.mode === "walking";
+
+  const rejectsBadBodies =
+    parseDirectionsRoute({ status: "ZERO_RESULTS", routes: [] }, "walking") ===
+      null &&
+    parseDirectionsRoute(null, "walking") === null &&
+    parseDirectionsRoute(
+      { status: "OK", routes: [{ legs: [], overview_polyline: { points: "x" } }] },
+      "walking",
+    ) === null;
+
+  const modeDefaultsToWalking =
+    readJourneyRouteMode(undefined) === "walking" &&
+    readJourneyRouteMode("transit") === "walking" &&
+    readJourneyRouteMode("driving") === "driving";
+
+  return parsesRoute && rejectsBadBodies && modeDefaultsToWalking;
 }

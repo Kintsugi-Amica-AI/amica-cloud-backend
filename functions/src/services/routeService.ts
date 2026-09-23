@@ -155,3 +155,117 @@ export async function estimateRoute(
   }
   return buildRouteEstimate(origin, destination, roadDistanceMeters);
 }
+
+/**
+ * Travel mode for a Walk/Ride with me journey route. Transit is left out on
+ * purpose: Directions needs a departure time for it and returns nothing in
+ * many Sri Lankan areas, so buses and trains use the road route instead.
+ */
+export type JourneyRouteMode = "walking" | "driving";
+
+export interface JourneyRoute {
+  mode: JourneyRouteMode;
+  /** Distance along the suggested route, in metres. */
+  distanceMeters: number;
+  /** Directions' own travel-time estimate for the route, in seconds. */
+  durationSeconds: number;
+  /** Google encoded polyline of the whole route, for drawing on the map. */
+  polyline: string;
+  /** Short name of the main road, e.g. "Galle Rd/A2", when Directions has one. */
+  summary: string;
+}
+
+export function readJourneyRouteMode(value: unknown): JourneyRouteMode {
+  return value === "driving" ? "driving" : "walking";
+}
+
+/**
+ * Pulls the first route out of a Directions API response body, or returns null
+ * when the body has no usable route. Kept pure so it can be tested without the
+ * network.
+ */
+export function parseDirectionsRoute(
+  body: unknown,
+  mode: JourneyRouteMode,
+): JourneyRoute | null {
+  if (typeof body !== "object" || body === null) {
+    return null;
+  }
+  const typed = body as {
+    status?: string;
+    routes?: {
+      summary?: string;
+      overview_polyline?: { points?: string };
+      legs?: { distance?: { value?: number }; duration?: { value?: number } }[];
+    }[];
+  };
+  if (typed.status !== "OK") {
+    return null;
+  }
+
+  const route = typed.routes?.[0];
+  const polyline = route?.overview_polyline?.points;
+  if (!route || typeof polyline !== "string" || !polyline) {
+    return null;
+  }
+
+  let distanceMeters = 0;
+  let durationSeconds = 0;
+  for (const leg of route.legs ?? []) {
+    const distance = leg.distance?.value;
+    const duration = leg.duration?.value;
+    distanceMeters += typeof distance === "number" ? distance : 0;
+    durationSeconds += typeof duration === "number" ? duration : 0;
+  }
+  if (distanceMeters <= 0 || durationSeconds <= 0) {
+    return null;
+  }
+
+  return {
+    mode,
+    distanceMeters,
+    durationSeconds,
+    polyline,
+    summary: typeof route.summary === "string" ? route.summary : "",
+  };
+}
+
+/**
+ * The suggested route between two points, for drawing on the journey map and
+ * predicting how long the journey takes.
+ *
+ * Returns null whenever no route is available (no key, network failure, or no
+ * route found). The app then falls back to a straight-line estimate.
+ */
+export async function fetchJourneyRoute(
+  origin: RoutePoint,
+  destination: RoutePoint,
+  mode: JourneyRouteMode,
+): Promise<JourneyRoute | null> {
+  const key = directionsApiKey();
+  if (!key) {
+    return null;
+  }
+
+  const url = new URL("https://maps.googleapis.com/maps/api/directions/json");
+  url.searchParams.set("origin", `${origin.latitude},${origin.longitude}`);
+  url.searchParams.set(
+    "destination",
+    `${destination.latitude},${destination.longitude}`,
+  );
+  url.searchParams.set("mode", mode);
+  url.searchParams.set("key", key);
+
+  try {
+    const response = await fetch(url.toString(), {
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!response.ok) {
+      return null;
+    }
+    return parseDirectionsRoute(await response.json(), mode);
+  } catch {
+    // A suggested route is a convenience. Never let it block a journey.
+    return null;
+  }
+}

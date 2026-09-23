@@ -1,6 +1,10 @@
 import { HttpsError, onCall, onRequest } from "firebase-functions/v2/https";
 
-import { estimateRoute } from "./services/routeService";
+import {
+  estimateRoute,
+  fetchJourneyRoute,
+  readJourneyRouteMode,
+} from "./services/routeService";
 import { isValidLatitude, isValidLongitude } from "./utils/locationUtils";
 
 export { onJourneyUpdated } from "./triggers/onJourneyUpdated";
@@ -60,6 +64,59 @@ export const getRouteDistance = onCall(async (request) => {
     straightLineMeters: estimate.straightLineMeters,
     routeFactor: estimate.routeFactor,
   };
+});
+
+/**
+ * Suggested route between two points for a Walk/Ride with me journey: the
+ * travel time Directions predicts, the distance, and an encoded polyline the
+ * app draws on the map.
+ *
+ * `mode` is "walking" (default) or "driving". Returns `{ available: false }`
+ * rather than failing when no route is available, so the app can fall back to
+ * its straight-line estimate.
+ */
+export const getJourneyRoute = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Sign in to get a route.");
+  }
+
+  const {
+    originLatitude,
+    originLongitude,
+    destinationLatitude,
+    destinationLongitude,
+    mode,
+  } = (request.data ?? {}) as Record<string, unknown>;
+
+  if (
+    !isValidLatitude(originLatitude) ||
+    !isValidLongitude(originLongitude) ||
+    !isValidLatitude(destinationLatitude) ||
+    !isValidLongitude(destinationLongitude)
+  ) {
+    throw new HttpsError(
+      "invalid-argument",
+      "Origin and destination coordinates are required.",
+    );
+  }
+
+  const route = await fetchJourneyRoute(
+    {
+      latitude: originLatitude as number,
+      longitude: originLongitude as number,
+    },
+    {
+      latitude: destinationLatitude as number,
+      longitude: destinationLongitude as number,
+    },
+    readJourneyRouteMode(mode),
+  );
+
+  if (!route) {
+    return { available: false };
+  }
+
+  return { available: true, ...route };
 });
 
 export const healthCheck = onRequest((_request, response) => {

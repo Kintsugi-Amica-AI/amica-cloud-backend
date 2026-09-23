@@ -30,6 +30,32 @@ export interface JourneyStopAlert {
   alertedAt?: string | null;
 }
 
+/**
+ * A pause on a timer journey, written by the mobile app.
+ *
+ * While paused, `estimatedEndTime` is already moved to `resumeAt` plus the
+ * time that was left, so anything that checks the deadline (including
+ * `hasJourneyExpired`) keeps working without knowing about pauses. Cleared
+ * when the user resumes early.
+ */
+export interface JourneyPause {
+  pausedAt: string;
+  /** When the timer resumes on its own if the user does not resume it first. */
+  resumeAt: string;
+  /** Countdown time left when the pause started, in seconds. */
+  remainingSeconds: number;
+}
+
+/** Suggested route saved when the journey started. */
+export interface JourneyRouteSnapshot {
+  mode: "walking" | "driving";
+  distanceMeters: number;
+  durationSeconds: number;
+  /** Google encoded polyline. */
+  polyline: string;
+  summary?: string;
+}
+
 export const DEFAULT_STOP_ALERT_DISTANCE_METERS = 2000;
 
 export interface JourneyModel {
@@ -45,6 +71,8 @@ export interface JourneyModel {
   actualEndTime?: string;
   safetyCheck?: JourneySafetyCheck;
   stopAlert?: JourneyStopAlert;
+  pause?: JourneyPause | null;
+  route?: JourneyRouteSnapshot | null;
   metadata: Record<string, unknown>;
   schemaVersion: number;
   createdAt: string;
