@@ -231,22 +231,98 @@ export function parseDirectionsRoute(
 }
 
 /**
- * The suggested route between two points, for drawing on the journey map and
- * predicting how long the journey takes.
- *
- * Returns null whenever no route is available (no key, network failure, or no
- * route found). The app then falls back to a straight-line estimate.
+ * Pulls the first route out of a Routes API (computeRoutes) response body, or
+ * returns null when there is none. Kept pure so it can be tested offline.
  */
-export async function fetchJourneyRoute(
+export function parseRoutesApiRoute(
+  body: unknown,
+  mode: JourneyRouteMode,
+): JourneyRoute | null {
+  if (typeof body !== "object" || body === null) {
+    return null;
+  }
+  const route = (
+    body as {
+      routes?: {
+        distanceMeters?: number;
+        duration?: string;
+        description?: string;
+        polyline?: { encodedPolyline?: string };
+      }[];
+    }
+  ).routes?.[0];
+  const polyline = route?.polyline?.encodedPolyline;
+  const distanceMeters = route?.distanceMeters;
+  // Duration comes back as a string of seconds, e.g. "1140s".
+  const durationSeconds = Number.parseFloat(route?.duration ?? "");
+  if (
+    typeof polyline !== "string" ||
+    !polyline ||
+    typeof distanceMeters !== "number" ||
+    distanceMeters <= 0 ||
+    !Number.isFinite(durationSeconds) ||
+    durationSeconds <= 0
+  ) {
+    return null;
+  }
+  return {
+    mode,
+    distanceMeters,
+    durationSeconds: Math.round(durationSeconds),
+    polyline,
+    summary: typeof route?.description === "string" ? route.description : "",
+  };
+}
+
+/** The Routes API, which replaced Directions for new Google Cloud projects. */
+async function fetchFromRoutesApi(
   origin: RoutePoint,
   destination: RoutePoint,
   mode: JourneyRouteMode,
+  key: string,
 ): Promise<JourneyRoute | null> {
-  const key = directionsApiKey();
-  if (!key) {
+  const response = await fetch(
+    "https://routes.googleapis.com/directions/v2:computeRoutes",
+    {
+      method: "POST",
+      signal: AbortSignal.timeout(8000),
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": key,
+        "X-Goog-FieldMask":
+          "routes.distanceMeters,routes.duration,routes.description,routes.polyline.encodedPolyline",
+      },
+      body: JSON.stringify({
+        origin: { location: { latLng: origin } },
+        destination: { location: { latLng: destination } },
+        travelMode: mode === "walking" ? "WALK" : "DRIVE",
+        polylineEncoding: "ENCODED_POLYLINE",
+      }),
+    },
+  );
+  const body = await response.json().catch(() => null);
+  if (!response.ok) {
+    const error = (body as { error?: { status?: string; message?: string } })
+      ?.error;
+    console.warn(
+      `getJourneyRoute: Routes API ${response.status} ${error?.status ?? ""}: ${error?.message ?? ""}`,
+    );
     return null;
   }
+  const route = parseRoutesApiRoute(body, mode);
+  if (!route) {
+    console.warn("getJourneyRoute: Routes API returned no route", body);
+  }
+  return route;
+}
 
+/** The legacy Directions API, for projects that still have it enabled. */
+async function fetchFromDirectionsApi(
+  origin: RoutePoint,
+  destination: RoutePoint,
+  mode: JourneyRouteMode,
+  key: string,
+): Promise<JourneyRoute | null> {
   const url = new URL("https://maps.googleapis.com/maps/api/directions/json");
   url.searchParams.set("origin", `${origin.latitude},${origin.longitude}`);
   url.searchParams.set(
@@ -256,16 +332,56 @@ export async function fetchJourneyRoute(
   url.searchParams.set("mode", mode);
   url.searchParams.set("key", key);
 
+  const response = await fetch(url.toString(), {
+    signal: AbortSignal.timeout(8000),
+  });
+  const body = (await response.json().catch(() => null)) as {
+    status?: string;
+    error_message?: string;
+  } | null;
+  const route = parseDirectionsRoute(body, mode);
+  if (!route) {
+    console.warn(
+      `getJourneyRoute: Directions API ${response.status} ${body?.status ?? ""}: ${body?.error_message ?? ""}`,
+    );
+  }
+  return route;
+}
+
+/**
+ * The suggested route between two points, for drawing on the journey map and
+ * predicting how long the journey takes.
+ *
+ * Tries the Routes API first (the only one new Google Cloud projects can
+ * enable), then the legacy Directions API. Returns null whenever no route is
+ * available; the reason is written to the function logs, and the app falls
+ * back to a straight-line estimate.
+ */
+export async function fetchJourneyRoute(
+  origin: RoutePoint,
+  destination: RoutePoint,
+  mode: JourneyRouteMode,
+): Promise<JourneyRoute | null> {
+  const key = directionsApiKey();
+  if (!key) {
+    console.warn("getJourneyRoute: GOOGLE_DIRECTIONS_API_KEY is not set");
+    return null;
+  }
+
   try {
-    const response = await fetch(url.toString(), {
-      signal: AbortSignal.timeout(8000),
-    });
-    if (!response.ok) {
-      return null;
+    const route = await fetchFromRoutesApi(origin, destination, mode, key);
+    if (route) {
+      return route;
     }
-    return parseDirectionsRoute(await response.json(), mode);
-  } catch {
+  } catch (error) {
+    console.warn("getJourneyRoute: Routes API call failed", error);
+  }
+
+  try {
+    return await fetchFromDirectionsApi(origin, destination, mode, key);
+  } catch (error) {
     // A suggested route is a convenience. Never let it block a journey.
+    console.warn("getJourneyRoute: Directions API call failed", error);
     return null;
   }
 }

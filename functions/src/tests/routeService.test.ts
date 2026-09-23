@@ -4,6 +4,7 @@ import {
   buildRouteEstimate,
   clampRouteFactor,
   parseDirectionsRoute,
+  parseRoutesApiRoute,
   readJourneyRouteMode,
 } from "../services/routeService";
 import { distanceInMeters } from "../utils/locationUtils";
@@ -91,5 +92,26 @@ export function journeyRouteSmokeTest(): boolean {
     readJourneyRouteMode("transit") === "walking" &&
     readJourneyRouteMode("driving") === "driving";
 
-  return parsesRoute && rejectsBadBodies && modeDefaultsToWalking;
+  const routesApi = parseRoutesApiRoute(
+    {
+      routes: [
+        {
+          distanceMeters: 1500,
+          duration: "1140s",
+          polyline: { encodedPolyline: "_p~iF~ps|U_ulLnnqC" },
+        },
+      ],
+    },
+    "walking",
+  );
+  const parsesRoutesApi =
+    routesApi !== null &&
+    routesApi.distanceMeters === 1500 &&
+    routesApi.durationSeconds === 1140 &&
+    parseRoutesApiRoute({ routes: [] }, "walking") === null &&
+    parseRoutesApiRoute({}, "walking") === null;
+
+  return (
+    parsesRoute && rejectsBadBodies && modeDefaultsToWalking && parsesRoutesApi
+  );
 }
