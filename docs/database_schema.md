@@ -21,6 +21,7 @@ The schema is designed so future safety features can be added without breaking t
 | `vehicles` | Stores sample vehicle safety records for Scan Before You Ride. |
 | `vehicle_reviews` | One private passenger review per completed vehicle journey. |
 | `vehicle_safety_events` | One unverified unanswered-check event per vehicle journey. |
+| `vehicle_observations` | The vehicle type and colour one user's phone saw on a plate. There is one per user per plate, and no photos are stored. |
 | `live_shares` | Server-only. One per shared journey; backs the public watch-live page. |
 | `guardian_invites` | Server-only. Single-use codes that link a contact's Amica account. |
 | `fcm_tokens` | One per device push token, owned by the signed-in user. |
@@ -475,6 +476,27 @@ Future extension notes:
 
 - OCR confidence and check history can be added later.
 - Verified reports should eventually come from trusted backend/admin processes.
+- `observedProfile` (map, written only by `onVehicleObservationCreated`): what Amica scans usually see on this plate.
+  - `observationCount`: number of observations folded in
+  - `typeCounts` / `colourCounts`: maps of word → count, e.g. `{ "car": 6, "van": 1 }`
+  - `usualType` / `usualColour`: the usual value, or `null`. A value only counts as usual when at least 3 scans agree and those scans make up at least 60% of the scans that reported it. This means one odd scan never changes a plate's profile.
+  - `typeAgreement` / `colourAgreement`: how many scans agree with the usual value
+  - `updatedAt`: timestamp
+
+## vehicle_observations
+
+The Scan before you ride vehicle check reads type and colour on the phone. It saves only those words, never the photo. The document id is `{plate}_{uid}`, so each user counts once per plate. Clients can create an observation but can't change or delete it. The `onVehicleObservationCreated` trigger adds each observation to `vehicles/{plate}.observedProfile` and stamps `aggregatedAt`, so a retried event isn't counted twice.
+
+| Field | Type | Notes |
+|---|---|---|
+| `userId` | string | Must be the signed-in user |
+| `vehiclePlate` | string | Canonical letter-series plate, `^[A-Z]{2,3}[0-9]{4}$` |
+| `vehicleType` | string, optional | `car`, `van`, `bus`, `lorry`, `motorbike`, `three_wheeler` |
+| `colour` | string, optional | `white`, `silver`, `grey`, `black`, `red`, `maroon`, `orange`, `yellow`, `green`, `blue`, `brown` |
+| `createdAt` | timestamp | Server time |
+| `aggregatedAt` | timestamp | Set by the trigger |
+
+At least one of `vehicleType` or `colour` must be present.
 
 ## live_shares
 

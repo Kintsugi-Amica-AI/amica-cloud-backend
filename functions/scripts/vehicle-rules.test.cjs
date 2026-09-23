@@ -69,3 +69,23 @@ test('duplicate trigger delivery aggregates each journey once', async () => {
   assert.equal(vehicle.unverifiedSafetyCheckCount, 1);
   await admin.app().delete();
 });
+
+test('vehicle observations: one per user per plate, known words only', async () => {
+  const db = env.authenticatedContext('alice').firestore();
+  const observation = (overrides = {}) => ({
+    userId: 'alice', vehiclePlate: 'CBR6797', vehicleType: 'car',
+    colour: 'white', createdAt: serverTimestamp(), ...overrides,
+  });
+  const ref = doc(db, 'vehicle_observations', 'CBR6797_alice');
+  await assert.doesNotReject(setDoc(ref, observation()));
+  await assert.rejects(updateDoc(ref, { colour: 'red' }), { code: 'permission-denied' });
+  await assert.rejects(setDoc(ref, observation({ colour: 'red' })), { code: 'permission-denied' });
+  // Someone else's id, an unknown word, an extra field, or nothing to say.
+  await assert.rejects(setDoc(doc(db, 'vehicle_observations', 'CBR6797_bob'), observation()), { code: 'permission-denied' });
+  await assert.rejects(setDoc(doc(db, 'vehicle_observations', 'CBO3286_alice'), observation({ vehiclePlate: 'CBO3286', colour: 'pink' })), { code: 'permission-denied' });
+  await assert.rejects(setDoc(doc(db, 'vehicle_observations', 'CBO3286_alice'), observation({ vehiclePlate: 'CBO3286', photo: 'x' })), { code: 'permission-denied' });
+  await assert.rejects(setDoc(doc(db, 'vehicle_observations', 'CBO3286_alice'), { userId: 'alice', vehiclePlate: 'CBO3286', createdAt: serverTimestamp() }), { code: 'permission-denied' });
+  // Colour alone is fine.
+  await assert.doesNotReject(setDoc(doc(db, 'vehicle_observations', 'CBO3286_alice'), { userId: 'alice', vehiclePlate: 'CBO3286', colour: 'blue', createdAt: serverTimestamp() }));
+  await assert.rejects(getDoc(doc(env.authenticatedContext('bob').firestore(), 'vehicle_observations', 'CBR6797_alice')), { code: 'permission-denied' });
+});

@@ -12,6 +12,7 @@ export { onJourneyUpdated } from "./triggers/onJourneyUpdated";
 export { onSosAlertCreated } from "./triggers/onSosAlertCreated";
 export { onVehicleReviewCreated } from "./triggers/onVehicleReviewCreated";
 export { onVehicleSafetyEventCreated } from "./triggers/onVehicleSafetyEventCreated";
+export { onVehicleObservationCreated } from "./triggers/onVehicleObservationCreated";
 
 // Watch-my-journey-live links and push alerts for contacts who have Amica.
 export { startJourneyShare } from "./callables/liveShareCallables";
