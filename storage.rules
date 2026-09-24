@@ -1,6 +1,7 @@
 rules_version = '2';
 
-// Cloud Storage is closed except for the first photo of each vehicle.
+// Cloud Storage is closed except for the first photo of each vehicle and
+// SOS audio clips.
 service firebase.storage {
   match /b/{bucket}/o {
 
@@ -18,6 +19,24 @@ service firebase.storage {
         && request.resource.contentType == 'image/jpeg'
         && request.resource.size > 0
         && request.resource.size < 2 * 1024 * 1024;
+      allow update, delete: if false;
+    }
+
+    // sos_audio/{uid}/{alertId}.m4a — a short clip recorded from the moment
+    // an SOS fired. Private to her: only she can read it, and it can be
+    // created once and never replaced or deleted from the app, so the
+    // evidence cannot be swapped or wiped from a taken phone. The
+    // onSosAudioUploaded function links it to sos_alerts/{alertId} after
+    // checking that alert is hers.
+    match /sos_audio/{uid}/{fileName} {
+      allow get: if request.auth != null && request.auth.uid == uid;
+      allow list: if false;
+      allow create: if request.auth != null
+        && request.auth.uid == uid
+        && fileName.matches('^[A-Za-z0-9_-]{1,128}[.]m4a$')
+        && request.resource.contentType == 'audio/mp4'
+        && request.resource.size > 0
+        && request.resource.size < 5 * 1024 * 1024;
       allow update, delete: if false;
     }
 

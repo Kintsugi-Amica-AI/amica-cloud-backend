@@ -11,6 +11,16 @@ export interface SosAlertEvidence {
   fakeCallActive?: boolean;
   scannedPlateNumber?: string;
   confidenceScore?: number;
+  /** Server: the SOS audio clip, set by `onSosAudioUploaded`. */
+  audioClip?: {
+    path: string;
+    contentType: string;
+    sizeBytes: number;
+    durationSeconds: number | null;
+    recordedAt: string | null;
+    triggerType: string | null;
+    uploadedAt: unknown;
+  };
 }
 
 export interface SosAlertModel {

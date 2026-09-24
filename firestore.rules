@@ -200,6 +200,16 @@ service cloud.firestore {
     // live_shares (watch-live pages) and guardian_invites are server-only:
     // the page reads a trimmed view through the liveJourney function.
 
+    // Website contact form: server-only. The submitContactMessage function
+    // writes them with the Admin SDK; nobody can read them from a client.
+    // Read them in the Firebase console (see docs/contact_form_setup.md).
+    match /contact_messages/{messageId} {
+      allow read, write: if false;
+    }
+    match /contact_rate_limits/{senderHash} {
+      allow read, write: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

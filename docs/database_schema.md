@@ -358,6 +358,15 @@ Optional and extendable fields:
   - `fakeCallActive`: boolean
   - `scannedPlateNumber`: string
   - `confidenceScore`: number
+  - `audioClip`: map, server-written by `onSosAudioUploaded` (clients cannot
+    write `evidence` after creating the alert)
+    - `path`: string, `sos_audio/{uid}/{alertId}.m4a` in Cloud Storage
+    - `contentType`: string, `audio/mp4` (AAC)
+    - `sizeBytes`: number
+    - `durationSeconds`: number or null (about 30)
+    - `recordedAt`: ISO string or null, when recording started on the phone
+    - `triggerType`: string or null, `manual` or `voice`
+    - `uploadedAt`: server timestamp
 - `metadata`: map
 - `schemaVersion`: number
 

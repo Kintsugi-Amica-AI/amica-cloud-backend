@@ -14,6 +14,7 @@ export { onVehicleReviewCreated } from "./triggers/onVehicleReviewCreated";
 export { onVehicleSafetyEventCreated } from "./triggers/onVehicleSafetyEventCreated";
 export { onVehicleObservationCreated } from "./triggers/onVehicleObservationCreated";
 export { onVehicleImageUploaded } from "./triggers/onVehicleImageUploaded";
+export { onSosAudioUploaded } from "./triggers/onSosAudioUploaded";
 
 // Watch-my-journey-live links and push alerts for contacts who have Amica.
 export { startJourneyShare } from "./callables/liveShareCallables";
@@ -25,6 +26,10 @@ export {
   unlinkGuardian,
 } from "./callables/guardianCallables";
 export { liveJourney } from "./http/liveJourney";
+
+// Contact form on the Amica website: store the message, then email the team.
+export { submitContactMessage } from "./http/submitContactMessage";
+export { onContactMessageCreated } from "./triggers/onContactMessageCreated";
 
 /**
  * Road distance between two points, for the mobile Smart Stop Alert.

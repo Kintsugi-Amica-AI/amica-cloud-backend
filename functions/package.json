@@ -8,14 +8,15 @@
   },
   "scripts": {
     "build": "tsc",
-    "test": "npm run build && node --test lib/tests/vehicleRatingService.test.js lib/tests/vehicleObservationService.test.js lib/tests/vehicleImageService.test.js lib/tests/liveShareService.test.js lib/tests/guardianService.test.js",
+    "test": "npm run build && node --test lib/tests/vehicleRatingService.test.js lib/tests/vehicleObservationService.test.js lib/tests/vehicleImageService.test.js lib/tests/liveShareService.test.js lib/tests/guardianService.test.js lib/tests/sosAudioService.test.js lib/tests/contactMessageService.test.js",
     "test:rules:unit": "node --test scripts/vehicle-rules.test.cjs",
     "lint": "tsc --noEmit",
     "test:rules:live": "node --test scripts/live-share-rules.test.cjs"
   },
   "dependencies": {
     "firebase-admin": "^12.7.0",
-    "firebase-functions": "^6.0.1"
+    "firebase-functions": "^6.0.1",
+    "nodemailer": "^10.0.10"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.2",
