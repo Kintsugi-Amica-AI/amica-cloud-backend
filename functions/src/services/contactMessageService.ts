@@ -37,6 +37,8 @@ export const CONTACT_ALLOWED_ORIGINS: Array<string | RegExp> = [
   "https://amica-cloud-backend.firebaseapp.com",
   /^https:\/\/[a-z0-9-]+--amica-cloud-backend\.web\.app$/, // Hosting preview channels
   /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/, // local development
+  // Website on Vercel: production (amica-website.vercel.app) and preview deployments.
+  /^https:\/\/amica[a-z0-9-]*\.vercel\.app$/,
 ];
 
 export interface ContactMessageInput {
