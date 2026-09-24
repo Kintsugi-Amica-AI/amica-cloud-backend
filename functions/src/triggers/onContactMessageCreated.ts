@@ -1,7 +1,6 @@
 import admin from "firebase-admin";
 import { logger } from "firebase-functions/v2";
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
-import { defineString } from "firebase-functions/params";
 import nodemailer from "nodemailer";
 
 import { COLLECTIONS } from "../constants/collectionNames";
@@ -11,29 +10,27 @@ import {
 } from "../services/contactMessageService";
 
 /**
- * Gmail App Password for the account that sends the notification emails.
- *
- * Supplied as an environment parameter (not Secret Manager) so the CI deploy
- * account needs no extra IAM roles: the dev deploy workflow writes it into
- * `functions/.env.<project>` from the GitHub secret CONTACT_SMTP_APP_PASSWORD,
- * and local deploys read the same (git-ignored) file.
+ * Email settings come from plain environment variables. Firebase loads them
+ * from `functions/.env.<project>` at deploy time (git-ignored; the dev deploy
+ * workflow writes it from the GitHub secret CONTACT_SMTP_APP_PASSWORD).
+ * They are read with process.env rather than defineString() so a
+ * non-interactive CI deploy never stops to ask for a value.
  * See docs/contact_form_setup.md.
  *
- * Empty = email delivery switched off; messages are still stored.
+ *   CONTACT_SMTP_APP_PASSWORD  Gmail App Password. Empty = emails switched off
+ *                              (messages are still stored in Firestore).
+ *   CONTACT_SMTP_USER          Gmail account that sends the emails.
+ *   CONTACT_INBOX              Where messages go (comma-separate for several).
  */
-const SMTP_PASSWORD = defineString("CONTACT_SMTP_APP_PASSWORD", {
-  default: "",
-  description: "Gmail App Password used to send contact-form notifications.",
-});
-const SMTP_USER = defineString("CONTACT_SMTP_USER", {
-  default: "teamkintsugi2026@gmail.com",
-  description: "Gmail address that sends contact-form notifications.",
-});
-/** Where website messages are delivered. Comma-separate to notify several people. */
-const CONTACT_INBOX = defineString("CONTACT_INBOX", {
-  default: "teamkintsugi2026@gmail.com",
-  description: "Inbox that receives Amica website contact-form messages.",
-});
+const DEFAULT_TEAM_INBOX = "teamkintsugi2026@gmail.com";
+
+function emailSettings() {
+  return {
+    password: (process.env.CONTACT_SMTP_APP_PASSWORD ?? "").replace(/\s+/g, ""),
+    user: (process.env.CONTACT_SMTP_USER ?? "").trim() || DEFAULT_TEAM_INBOX,
+    inbox: (process.env.CONTACT_INBOX ?? "").trim() || DEFAULT_TEAM_INBOX,
+  };
+}
 
 /**
  * Emails each new website message to the team inbox. The Firestore document
@@ -60,8 +57,7 @@ export const onContactMessageCreated = onDocumentCreated(
       page: message.page ?? undefined,
     });
 
-    const user = SMTP_USER.value();
-    const password = SMTP_PASSWORD.value().replace(/\s+/g, "");
+    const { user, password, inbox } = emailSettings();
     if (!password) {
       logger.warn("Contact message stored but not emailed: CONTACT_SMTP_APP_PASSWORD is not set", {
         id: event.params.messageId,
@@ -80,7 +76,7 @@ export const onContactMessageCreated = onDocumentCreated(
       });
       const info = await transport.sendMail({
         from: { name: "Amica website", address: user },
-        to: CONTACT_INBOX.value(),
+        to: inbox,
         replyTo: email.replyTo,
         subject: email.subject,
         text: email.text,

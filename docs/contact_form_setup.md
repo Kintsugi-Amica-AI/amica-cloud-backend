@@ -72,9 +72,8 @@ cd ..
 firebase deploy --only functions:submitContactMessage,functions:onContactMessageCreated,firestore:rules
 ```
 
-`CONTACT_SMTP_USER` and `CONTACT_INBOX` both default to `teamkintsugi2026@gmail.com`. If the CLI asks
-for them, press Enter to accept the default. To notify several people, put
-`CONTACT_INBOX=a@x.com,b@y.com` in `functions/.env.amica-cloud-backend` (already git-ignored) and redeploy.
+`CONTACT_SMTP_USER` and `CONTACT_INBOX` are optional and default to `teamkintsugi2026@gmail.com`. To
+notify several people, add `CONTACT_INBOX="a@x.com,b@y.com"` to the same `.env` file and redeploy.
 
 > Cloud Functions and outbound email need the **Blaze (pay-as-you-go)** plan. A contact form uses a
 > tiny fraction of the free monthly allowance, but a billing account must be attached.
