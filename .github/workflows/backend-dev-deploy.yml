@@ -137,6 +137,20 @@ jobs:
           umask 077
           printf 'CONTACT_SMTP_APP_PASSWORD="%s"\n' "${CONTACT_SMTP_APP_PASSWORD// /}" >> "functions/.env.$FIREBASE_PROJECT_ID_DEV"
 
+      # Journey routes and the Bus Stop Alert's road distance: the Google Maps
+      # key reaches the functions as an environment parameter, same as above.
+      # Without the GitHub secret, both fall back to straight-line estimates.
+      - name: Write Google Directions API key
+        env:
+          GOOGLE_DIRECTIONS_API_KEY: ${{ secrets.GOOGLE_DIRECTIONS_API_KEY }}
+        run: |
+          if [ -z "$GOOGLE_DIRECTIONS_API_KEY" ]; then
+            echo "::warning::GOOGLE_DIRECTIONS_API_KEY secret is not set; journey routes will fall back to straight-line estimates"
+            exit 0
+          fi
+          umask 077
+          printf 'GOOGLE_DIRECTIONS_API_KEY="%s"\n' "${GOOGLE_DIRECTIONS_API_KEY// /}" >> "functions/.env.$FIREBASE_PROJECT_ID_DEV"
+
       - name: Deploy functions to dev if configured
         run: |
           if [ -f functions/package.json ]; then
