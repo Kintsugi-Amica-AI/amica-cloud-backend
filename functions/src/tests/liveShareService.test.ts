@@ -6,6 +6,7 @@ import {
   buildShareUrl,
   firstName,
   generateShareToken,
+  isSmsSafeShareToken,
   isShareExpired,
   isValidShareToken,
   shareFieldsFromJourney,
@@ -24,12 +25,19 @@ const journey = {
   route: { polyline: "abc" },
 };
 
-test("tokens are long, URL-safe and unique", () => {
+test("tokens are long, SMS-safe and unique", () => {
   const a = generateShareToken();
   const b = generateShareToken();
   assert.ok(isValidShareToken(a));
   assert.notEqual(a, b);
   assert.equal(a.length, 22);
+  assert.ok(isSmsSafeShareToken(a));
+  for (let i = 0; i < 500; i++) {
+    assert.match(generateShareToken(), /^[A-Za-z0-9]{22}$/);
+  }
+  // Links already sent with `-` or `_` still open.
+  assert.ok(isValidShareToken("abc-def_ghijklmnopqrstu"));
+  assert.equal(isSmsSafeShareToken("abc-def_ghijklmnopqrstu"), false);
   assert.equal(isValidShareToken("short"), false);
   assert.equal(isValidShareToken("../../users/abcdefghijklmnop"), false);
 });

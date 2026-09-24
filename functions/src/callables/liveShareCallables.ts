@@ -7,6 +7,7 @@ import {
   buildShareUrl,
   firstName,
   generateShareToken,
+  isSmsSafeShareToken,
   shareFieldsFromJourney,
 } from "../services/liveShareService";
 import {
@@ -47,6 +48,11 @@ export const startJourneyShare = onCall(async (request) => {
   const now = new Date();
   let token: string | null =
     typeof journey.liveShare?.token === "string" ? journey.liveShare.token : null;
+  // A journey shared before the letters-only change keeps an old token that
+  // may not survive SMS, so give it a fresh one.
+  if (token && !isSmsSafeShareToken(token)) {
+    token = null;
+  }
   if (token) {
     const existing = (await db.collection(COLLECTIONS.liveShares).doc(token).get()).data();
     if (!existing || existing.journeyId !== journeyId || existing.userId !== uid) {

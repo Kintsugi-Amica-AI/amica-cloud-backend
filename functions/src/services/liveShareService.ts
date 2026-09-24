@@ -5,7 +5,7 @@ import { randomBytes } from "node:crypto";
  *
  * A share is a `live_shares/{token}` document holding only what a contact
  * needs to see: her first name, where she is heading, where she is now and
- * whether the journey is still going. The token is the whole secret (128
+ * whether the journey is still going. The token is the whole secret (about 131
  * random bits), so the page needs no sign-in, and the journey document itself
  * is never exposed. Clients cannot read `live_shares` at all; the page gets a
  * trimmed view through the `liveJourney` HTTP function.
@@ -54,10 +54,36 @@ export interface LiveShareView {
   serverTime: string;
 }
 
+// Still accepts `-` and `_` so links sent before tokens went letters-only keep working.
 const TOKEN_PATTERN = /^[A-Za-z0-9_-]{20,64}$/;
 
+/**
+ * Letters and digits only. The link goes out by SMS, and `_` and `-` don't
+ * survive that reliably: `_` is an escape-range character in the GSM SMS
+ * alphabet that some carriers turn into `§` or drop, and many messaging apps
+ * end the tappable link before a trailing `-` or `_`. Either one leaves the
+ * contact on "Link not found".
+ */
+const SMS_SAFE_ALPHABET =
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+const SHARE_TOKEN_LENGTH = 22; // 62^22 ≈ 2^131, at least the old 128 bits.
+
 export function generateShareToken(): string {
-  return randomBytes(16).toString("base64url");
+  let token = "";
+  while (token.length < SHARE_TOKEN_LENGTH) {
+    for (const byte of randomBytes(32)) {
+      // 248 = 4 × 62: dropping bytes 248–255 keeps every character equally likely.
+      if (byte < 248 && token.length < SHARE_TOKEN_LENGTH) {
+        token += SMS_SAFE_ALPHABET[byte % 62];
+      }
+    }
+  }
+  return token;
+}
+
+/** True for tokens made by the current generator (no `-` or `_`). */
+export function isSmsSafeShareToken(value: string): boolean {
+  return /^[A-Za-z0-9]+$/.test(value);
 }
 
 export function isValidShareToken(value: unknown): value is string {
