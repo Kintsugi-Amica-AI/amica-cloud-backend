@@ -200,5 +200,5 @@ If a secret is accidentally committed, tell the team immediately and rotate the 
 Messages from the contact form on the Amica website (`amica-website/`) are received by the
 `submitContactMessage` HTTPS function, stored in the server-only `contact_messages` collection, and
 emailed to **teamkintsugi2026@gmail.com** by the `onContactMessageCreated` trigger (Gmail SMTP via
-nodemailer). The Gmail App Password is stored as the Firebase secret `CONTACT_SMTP_PASSWORD` — never
-in the repository. Setup, deployment and troubleshooting: [docs/contact_form_setup.md](docs/contact_form_setup.md).
+nodemailer). The Gmail App Password is supplied as the environment parameter `CONTACT_SMTP_APP_PASSWORD`
+(GitHub secret in CI, git-ignored `functions/.env.<project>` locally) — never in the repository. Setup, deployment and troubleshooting: [docs/contact_form_setup.md](docs/contact_form_setup.md).

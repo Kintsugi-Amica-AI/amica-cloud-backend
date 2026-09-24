@@ -122,6 +122,21 @@ jobs:
         run: |
           firebase deploy --only storage --project "$FIREBASE_PROJECT_ID_DEV" --non-interactive
 
+      # Website contact form: the Gmail App Password reaches the function as an
+      # environment parameter (functions/.env.<project>, never committed), so
+      # the CI service account needs no Secret Manager roles. Without the
+      # GitHub secret, messages are still stored but not emailed.
+      - name: Write contact-form email settings
+        env:
+          CONTACT_SMTP_APP_PASSWORD: ${{ secrets.CONTACT_SMTP_APP_PASSWORD }}
+        run: |
+          if [ -z "$CONTACT_SMTP_APP_PASSWORD" ]; then
+            echo "::warning::CONTACT_SMTP_APP_PASSWORD secret is not set; contact messages will be stored but not emailed"
+            exit 0
+          fi
+          umask 077
+          printf 'CONTACT_SMTP_APP_PASSWORD="%s"\n' "${CONTACT_SMTP_APP_PASSWORD// /}" >> "functions/.env.$FIREBASE_PROJECT_ID_DEV"
+
       - name: Deploy functions to dev if configured
         run: |
           if [ -f functions/package.json ]; then

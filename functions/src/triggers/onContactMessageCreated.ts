@@ -1,7 +1,7 @@
 import admin from "firebase-admin";
 import { logger } from "firebase-functions/v2";
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
-import { defineSecret, defineString } from "firebase-functions/params";
+import { defineString } from "firebase-functions/params";
 import nodemailer from "nodemailer";
 
 import { COLLECTIONS } from "../constants/collectionNames";
@@ -11,12 +11,20 @@ import {
 } from "../services/contactMessageService";
 
 /**
- * Gmail account that sends the notification emails, and its App Password.
- * Set once with:
- *   firebase functions:secrets:set CONTACT_SMTP_PASSWORD
- * (see docs/contact_form_setup.md).
+ * Gmail App Password for the account that sends the notification emails.
+ *
+ * Supplied as an environment parameter (not Secret Manager) so the CI deploy
+ * account needs no extra IAM roles: the dev deploy workflow writes it into
+ * `functions/.env.<project>` from the GitHub secret CONTACT_SMTP_APP_PASSWORD,
+ * and local deploys read the same (git-ignored) file.
+ * See docs/contact_form_setup.md.
+ *
+ * Empty = email delivery switched off; messages are still stored.
  */
-const SMTP_PASSWORD = defineSecret("CONTACT_SMTP_PASSWORD");
+const SMTP_PASSWORD = defineString("CONTACT_SMTP_APP_PASSWORD", {
+  default: "",
+  description: "Gmail App Password used to send contact-form notifications.",
+});
 const SMTP_USER = defineString("CONTACT_SMTP_USER", {
   default: "teamkintsugi2026@gmail.com",
   description: "Gmail address that sends contact-form notifications.",
@@ -35,7 +43,6 @@ const CONTACT_INBOX = defineString("CONTACT_INBOX", {
 export const onContactMessageCreated = onDocumentCreated(
   {
     document: `${COLLECTIONS.contactMessages}/{messageId}`,
-    secrets: [SMTP_PASSWORD],
     retry: false,
     maxInstances: 5,
   },
@@ -54,10 +61,22 @@ export const onContactMessageCreated = onDocumentCreated(
     });
 
     const user = SMTP_USER.value();
+    const password = SMTP_PASSWORD.value().replace(/\s+/g, "");
+    if (!password) {
+      logger.warn("Contact message stored but not emailed: CONTACT_SMTP_APP_PASSWORD is not set", {
+        id: event.params.messageId,
+      });
+      await snapshot.ref.update({
+        "delivery.state": "not_configured",
+        "delivery.error": "CONTACT_SMTP_APP_PASSWORD is not set",
+      });
+      return;
+    }
+
     try {
       const transport = nodemailer.createTransport({
         service: "gmail",
-        auth: { user, pass: SMTP_PASSWORD.value() },
+        auth: { user, pass: password },
       });
       const info = await transport.sendMail({
         from: { name: "Amica website", address: user },

@@ -43,16 +43,24 @@ Gmail only lets apps send mail with an *App Password* (your normal password will
 3. Open **App passwords** (search "App passwords" in the account settings), create one called
    `Amica website`, and copy the 16-character password.
 
-### 2. Store it as a Firebase secret
+### 2. Give the password to the function
 
-```bash
-cd amica-cloud-backend
-firebase use amica-cloud-backend
-firebase functions:secrets:set CONTACT_SMTP_PASSWORD
-# paste the 16-character App Password when asked
-```
+The password is passed as an environment parameter, `CONTACT_SMTP_APP_PASSWORD` (not Secret
+Manager), so the CI deploy account needs no extra permissions.
 
-Never put this password in code, `.env` files or commits.
+- **GitHub Actions deploys** (`backend-dev-deploy.yml`): in the GitHub repository go to
+  **Settings → Secrets and variables → Actions → New repository secret**, name it
+  `CONTACT_SMTP_APP_PASSWORD` and paste the App Password. The workflow writes it into
+  `functions/.env.<project>` just before deploying.
+- **Deploys from your own computer:** create `functions/.env.amica-cloud-backend` (already git-ignored)
+  containing:
+
+  ```
+  CONTACT_SMTP_APP_PASSWORD="abcdefghijklmnop"
+  ```
+
+Never commit this password. If it is missing, messages are still saved in Firestore with
+`delivery.state: "not_configured"` — nothing is lost.
 
 ### 3. Install and deploy
 
@@ -98,6 +106,6 @@ domain, add it to that list and redeploy.**
 | Symptom | Fix |
 |---|---|
 | Website says "couldn't send" and the browser console shows a CORS error | The page's origin isn't in `CONTACT_ALLOWED_ORIGINS`. |
-| Message is in Firestore with `delivery.state: "error"`, `Invalid login` | Wrong / missing App Password. Re-run step 2 and redeploy `onContactMessageCreated`. |
+| Message is in Firestore with `delivery.state: "error"`, `Invalid login` | Wrong App Password. Update it (step 2) and redeploy `onContactMessageCreated`. |
 | No document in `contact_messages` | Check `firebase functions:log --only submitContactMessage`. |
 | Email lands in Spam | Mark it "Not spam" once; Gmail learns quickly since it is sent from the same account. |
