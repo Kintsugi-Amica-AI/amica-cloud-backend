@@ -284,12 +284,16 @@ export function hasJourneyExpired(journey: JourneyModel, now = new Date()): bool
     return false;
   }
 
-  // A Smart Stop Alert ride can never expire: it has no deadline, and its
+  // A stop-alert-only ride can never expire: it has no deadline, and its
   // estimatedEndTime is only a placeholder equal to when the ride started.
   // Without this, every bus ride would read as expired the moment it began and
   // `onJourneyUpdated` would send the rider a safety check they never asked
   // for, seconds after boarding.
-  if (isStopAlertRide(journey)) {
+  //
+  // A bus or train journey started from the journey screen has the stop alert
+  // AND a real safety timer (safetyCheck.required stays true), so it expires
+  // like any other timer journey.
+  if (isStopAlertRide(journey) && journey.safetyCheck?.required === false) {
     return false;
   }
 
